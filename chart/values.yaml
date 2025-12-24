@@ -30,8 +30,8 @@ backend:
 
     # Flask Settings
     # DEBUG: "False"
-    # SECRET_KEY: "" # Auto-generated if empty
-    # SECURITY_PASSWORD_SALT: "" # Auto-generated if empty
+    SECRET_KEY: "change-me-please-secret-key-12345" # Fixed key for sessions
+    SECURITY_PASSWORD_SALT: "change-me-please-password-salt-67890" # Fixed salt for passwords
     
     # OpenTAKServer Settings
     # OTS_DATA_FOLDER: "/app/data" # Need to ensure volume mount matches this if changed
