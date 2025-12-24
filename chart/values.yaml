@@ -113,7 +113,7 @@ backend:
     
 
     # Redis / RabbitMQ (defaults from defaultconfig.py used if not set)
-    # OTS_RABBITMQ_SERVER_ADDRESS: "rabbitmq"
+    OTS_RABBITMQ_SERVER_ADDRESS: "{{ include \"opentakserver.fullname\" . }}-rabbitmq"
     
     # MediaMTX
     OTS_MEDIAMTX_API_ADDRESS: "http://{{ .Release.Name }}-mediamtx:9997"
