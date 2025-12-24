@@ -1,0 +1,59 @@
+{{- if .Values.mediamtx.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "opentakserver.fullname" . }}-mediamtx
+  labels:
+    {{- include "opentakserver.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mediamtx
+spec:
+  type: {{ .Values.mediamtx.service.type }}
+  ports:
+    - port: {{ .Values.mediamtx.service.apiPort }}
+      targetPort: api
+      protocol: TCP
+      name: api
+    - port: {{ .Values.mediamtx.service.rtspPort }}
+      targetPort: rtsp
+      protocol: TCP
+      name: rtsp
+    - port: {{ .Values.mediamtx.service.rtmpPort }}
+      targetPort: rtmp
+      protocol: TCP
+      name: rtmp
+    - port: 1936
+      targetPort: 1936
+      protocol: TCP
+      name: rtmps
+    - port: {{ .Values.mediamtx.service.hlsPort }}
+      targetPort: hls
+      protocol: TCP
+      name: hls
+    - port: {{ .Values.mediamtx.service.webrtcPort }}
+      targetPort: webrtc
+      protocol: TCP
+      name: webrtc
+    - port: 8000
+      targetPort: 8000
+      protocol: UDP
+      name: rtp
+    - port: 8001
+      targetPort: 8001
+      protocol: UDP
+      name: rtcp
+    - port: 8189
+      targetPort: 8189
+      protocol: UDP
+      name: webrtc-udp
+    - port: 8322
+      targetPort: 8322
+      protocol: TCP
+      name: hls-s
+    - port: 8890
+      targetPort: 8890
+      protocol: UDP
+      name: srt
+  selector:
+    {{- include "opentakserver.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: mediamtx
+{{- end }}

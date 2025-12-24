@@ -1,0 +1,195 @@
+global:
+  domain: opentakserver.local
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+backend:
+  image:
+    repository: opentakserver-backend
+    pullPolicy: IfNotPresent
+    tag: "latest"
+  replicaCount: 1
+  service:
+    type: LoadBalancer
+    port: 8081
+  resources: {}
+  #  limits:
+  #    cpu: 100m
+  #    memory: 128Mi
+  #  requests:
+  #    cpu: 100m
+  #    memory: 128Mi
+  env:
+    # Basic Config
+    OTS_LISTENER_PORT: "8081"
+    OTS_LOG_ROTATE_WHEN: "midnight"
+
+    # Flask Settings
+    # DEBUG: "False"
+    # SECRET_KEY: "" # Auto-generated if empty
+    # SECURITY_PASSWORD_SALT: "" # Auto-generated if empty
+    
+    # OpenTAKServer Settings
+    # OTS_DATA_FOLDER: "/app/data" # Need to ensure volume mount matches this if changed
+    # OTS_MARTI_HTTP_PORT: "8080"
+    # OTS_MARTI_HTTPS_PORT: "8443"
+    # OTS_CERTIFICATE_ENROLLMENT_PORT: "8446"
+    # OTS_SSL_CERT_HEADER: "X-Ssl-Cert"
+    # OTS_TCP_STREAMING_PORT: "8088"
+    # OTS_SSL_STREAMING_PORT: "8089"
+    # OTS_BACKUP_COUNT: "7"
+    # OTS_COT_PARSER_PROCESSES: "1"
+    # OTS_SSL_VERIFICATION_MODE: "2" # ssl.CERT_REQUIRED
+    # OTS_NODE_ID: "" # Auto-generated if empty
+    
+    # CA Settings
+    # OTS_CA_NAME: "OpenTAKServer-CA"
+    # OTS_CA_PASSWORD: "atakatak"
+    # OTS_CA_EXPIRATION_TIME: "3650"
+    # OTS_CA_COUNTRY: "WW"
+    # OTS_CA_STATE: "XX"
+    # OTS_CA_CITY: "YY"
+    # OTS_CA_ORGANIZATION: "ZZ"
+    # OTS_CA_ORGANIZATIONAL_UNIT: "OpenTAKServer"
+    
+    # External Data Sources
+    # OTS_AIRPLANES_LIVE_LAT: "40.744213"
+    # OTS_AIRPLANES_LIVE_LON: "-73.986939"
+    # OTS_AIRPLANES_LIVE_RADIUS: "10"
+    # OTS_AISHUB_USERNAME: ""
+    # OTS_AISHUB_SOUTH_LAT: ""
+    # OTS_AISHUB_WEST_LON: ""
+    # OTS_AISHUB_NORTH_LAT: ""
+    # OTS_AISHUB_EAST_LON: ""
+    # OTS_AISHUB_MMSI_LIST: ""
+    # OTS_AISHUB_IMO_LIST: ""
+    
+    # Plugins & Features
+    # OTS_PROFILE_MAP_SOURCES: "True"
+    # OTS_ENABLE_MUMBLE_AUTHENTICATION: "False"
+    # OTS_ENABLE_PLUGINS: "True"
+    # OTS_PLUGIN_REPO: "https://repo.opentakserver.io/brian/prod/"
+    # OTS_ENABLE_LDAP: "False"
+    
+    # Email Settings
+    # OTS_ENABLE_EMAIL: "False"
+    # MAIL_SERVER: "smtp.gmail.com"
+    # MAIL_PORT: "587"
+    # MAIL_USE_SSL: "False"
+    # MAIL_USE_TLS: "True"
+    # MAIL_USERNAME: ""
+    # MAIL_PASSWORD: ""
+    # MAIL_DEFAULT_SENDER: ""
+    # MAIL_MAX_EMAILS: ""
+    # MAIL_SUPPRESS_SEND: "False"
+    # MAIL_ASCII_ATTACHMENTS: "False"
+    # OTS_EMAIL_DOMAIN_WHITELIST: "[]"
+    # OTS_EMAIL_DOMAIN_BLACKLIST: "[]"
+    # OTS_EMAIL_TLD_WHITELIST: "[]"
+    # OTS_EMAIL_TLD_BLACKLIST: "[]"
+    
+    # Data Management
+    # OTS_DELETE_OLD_DATA_SECONDS: "0"
+    # OTS_DELETE_OLD_DATA_MINUTES: "0"
+    # OTS_DELETE_OLD_DATA_HOURS: "0"
+    # OTS_DELETE_OLD_DATA_DAYS: "0"
+    # OTS_DELETE_OLD_DATA_WEEKS: "1"
+
+    # LDAP Settings (if enabled)
+    # OTS_LDAP_ADMIN_GROUP: "ots_admin"
+    # LDAP_HOST: ""
+    # LDAP_BASE_DN: ""
+    # LDAP_USER_DN: ""
+    # LDAP_GROUP_DN: ""
+    # LDAP_BIND_USER_DN: "cn=admin,ou=users=dc=example,dc=com"
+    # LDAP_BIND_USER_PASSWORD: "password"
+    
+    # Postgres
+    SQLALCHEMY_DATABASE_URI: "postgresql+psycopg://ots:ots@opentakserver-postgres:5432/ots"
+    # SQLALCHEMY_ECHO: "False"
+    
+
+    # Redis / RabbitMQ (defaults from defaultconfig.py used if not set)
+    # OTS_RABBITMQ_SERVER_ADDRESS: "rabbitmq"
+    
+    # MediaMTX
+    OTS_MEDIAMTX_API_ADDRESS: "http://{{ .Release.Name }}-mediamtx:9997"
+
+frontend:
+  image:
+    repository: opentakserver-ui
+    pullPolicy: IfNotPresent
+    tag: "latest"
+  replicaCount: 1
+  service:
+    type: LoadBalancer
+    port: 80
+  resources: {}
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: opentakserver.local
+      paths:
+        - path: /
+          pathType: Prefix
+          backend: frontend
+        - path: /api
+          pathType: Prefix
+          backend: backend
+        - path: /oauth
+          pathType: Prefix
+          backend: backend
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+postgresql:
+  enabled: true
+  auth:
+    username: ots
+    password: ots
+    database: ots
+
+rabbitmq:
+  enabled: true
+  auth:
+    username: guest
+    password: guest
+
+mediamtx:
+  enabled: true
+  image:
+    repository: bluenviron/mediamtx
+    pullPolicy: IfNotPresent
+    tag: "latest"
+  replicaCount: 1
+  service:
+    type: LoadBalancer
+    apiPort: 9997
+    rtspPort: 8554
+    rtmpPort: 1935
+    hlsPort: 8888
+    webrtcPort: 8889
+  resources: {}
+
+mumble:
+  enabled: true
+  image:
+    repository: mumblevoip/mumble-server
+    pullPolicy: IfNotPresent
+    tag: "latest"
+  replicaCount: 1
+  service:
+    type: LoadBalancer
+    port: 64738
+  resources: {}
+

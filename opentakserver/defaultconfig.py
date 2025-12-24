@@ -97,39 +97,43 @@ class DefaultConfig:
     OTS_LOG_ROTATE_INTERVAL = int(os.getenv("OTS_LOG_ROTATE_INTERVAL", 0))
 
     # ADS-B Settings
-    OTS_AIRPLANES_LIVE_LAT = 40.744213
-    OTS_AIRPLANES_LIVE_LON = -73.986939
-    OTS_AIRPLANES_LIVE_RADIUS = 10
+    # ADS-B Settings
+    OTS_AIRPLANES_LIVE_LAT = float(os.getenv("OTS_AIRPLANES_LIVE_LAT", 40.744213))
+    OTS_AIRPLANES_LIVE_LON = float(os.getenv("OTS_AIRPLANES_LIVE_LON", -73.986939))
+    OTS_AIRPLANES_LIVE_RADIUS = int(os.getenv("OTS_AIRPLANES_LIVE_RADIUS", 10))
 
-    OTS_ADSB_GROUP = "ADS-B"
-    OTS_AIS_GROUP = "AIS"
+    OTS_ADSB_GROUP = os.getenv("OTS_ADSB_GROUP", "ADS-B")
+    OTS_AIS_GROUP = os.getenv("OTS_AIS_GROUP", "AIS")
 
-    OTS_ENABLE_PLUGINS = True
-    OTS_PLUGIN_REPO = "https://repo.opentakserver.io/brian/prod/"
-    OTS_PLUGIN_PREFIXES = ["ots-", "ots_"]
+    OTS_ENABLE_PLUGINS = os.getenv("OTS_ENABLE_PLUGINS", "True").lower() in ["true", "1", "yes"]
+    OTS_PLUGIN_REPO = os.getenv("OTS_PLUGIN_REPO", "https://repo.opentakserver.io/brian/prod/")
+    OTS_PLUGIN_PREFIXES = os.getenv("OTS_PLUGIN_PREFIXES", "ots-,ots_").split(",")
 
     # AIS Settings
-    OTS_AISHUB_USERNAME = None
-    OTS_AISHUB_SOUTH_LAT = None
-    OTS_AISHUB_WEST_LON = None
-    OTS_AISHUB_NORTH_LAT = None
-    OTS_AISHUB_EAST_LON = None
-    OTS_AISHUB_MMSI_LIST = ""
-    OTS_AISHUB_IMO_LIST = ""
+    # AIS Settings
+    OTS_AISHUB_USERNAME = os.getenv("OTS_AISHUB_USERNAME", None)
+    OTS_AISHUB_SOUTH_LAT = os.getenv("OTS_AISHUB_SOUTH_LAT", None)
+    OTS_AISHUB_WEST_LON = os.getenv("OTS_AISHUB_WEST_LON", None)
+    OTS_AISHUB_NORTH_LAT = os.getenv("OTS_AISHUB_NORTH_LAT", None)
+    OTS_AISHUB_EAST_LON = os.getenv("OTS_AISHUB_EAST_LON", None)
+    OTS_AISHUB_MMSI_LIST = os.getenv("OTS_AISHUB_MMSI_LIST", "")
+    OTS_AISHUB_IMO_LIST = os.getenv("OTS_AISHUB_IMO_LIST", "")
 
-    OTS_PROFILE_MAP_SOURCES = True
+    OTS_PROFILE_MAP_SOURCES = os.getenv("OTS_PROFILE_MAP_SOURCES", "True").lower() in ["true", "1", "yes"]
 
-    OTS_ENABLE_MUMBLE_AUTHENTICATION = False
+    OTS_ENABLE_MUMBLE_AUTHENTICATION = os.getenv("OTS_ENABLE_MUMBLE_AUTHENTICATION", "False").lower() in ["true", "1", "yes"]
 
-    OTS_IP_WHITELIST = ["127.0.0.1"]
+    OTS_IP_WHITELIST = os.getenv("OTS_IP_WHITELIST", "127.0.0.1").split(",")
 
     # Meshtastic settings
-    OTS_ENABLE_MESHTASTIC = False
-    OTS_MESHTASTIC_TOPIC = "opentakserver"
-    OTS_MESHTASTIC_PUBLISH_INTERVAL = 30
-    OTS_MESHTASTIC_DOWNLINK_CHANNELS = []
-    OTS_MESHTASTIC_NODEINFO_INTERVAL = 3
-    OTS_MESHTASTIC_GROUP = "Meshtastic"
+    # Meshtastic settings
+    OTS_ENABLE_MESHTASTIC = os.getenv("OTS_ENABLE_MESHTASTIC", "False").lower() in ["true", "1", "yes"]
+    OTS_MESHTASTIC_TOPIC = os.getenv("OTS_MESHTASTIC_TOPIC", "opentakserver")
+    OTS_MESHTASTIC_PUBLISH_INTERVAL = int(os.getenv("OTS_MESHTASTIC_PUBLISH_INTERVAL", 30))
+    # Downlink channels expected as comma separated string in env var
+    OTS_MESHTASTIC_DOWNLINK_CHANNELS = os.getenv("OTS_MESHTASTIC_DOWNLINK_CHANNELS", "").split(",") if os.getenv("OTS_MESHTASTIC_DOWNLINK_CHANNELS") else []
+    OTS_MESHTASTIC_NODEINFO_INTERVAL = int(os.getenv("OTS_MESHTASTIC_NODEINFO_INTERVAL", 3))
+    OTS_MESHTASTIC_GROUP = os.getenv("OTS_MESHTASTIC_GROUP", "Meshtastic")
 
     # Email settings
     OTS_ENABLE_EMAIL = os.getenv("OTS_ENABLE_EMAIL", "False").lower() in ["true", "1", "yes"]
@@ -144,10 +148,10 @@ class DefaultConfig:
     MAIL_MAX_EMAILS = None
     MAIL_SUPPRESS_SEND = False
     MAIL_ASCII_ATTACHMENTS = False
-    OTS_EMAIL_DOMAIN_WHITELIST = []
-    OTS_EMAIL_DOMAIN_BLACKLIST = []
-    OTS_EMAIL_TLD_WHITELIST = []
-    OTS_EMAIL_TLD_BLACKLIST = []
+    OTS_EMAIL_DOMAIN_WHITELIST = os.getenv("OTS_EMAIL_DOMAIN_WHITELIST", "").split(",") if os.getenv("OTS_EMAIL_DOMAIN_WHITELIST") else []
+    OTS_EMAIL_DOMAIN_BLACKLIST = os.getenv("OTS_EMAIL_DOMAIN_BLACKLIST", "").split(",") if os.getenv("OTS_EMAIL_DOMAIN_BLACKLIST") else []
+    OTS_EMAIL_TLD_WHITELIST = os.getenv("OTS_EMAIL_TLD_WHITELIST", "").split(",") if os.getenv("OTS_EMAIL_TLD_WHITELIST") else []
+    OTS_EMAIL_TLD_BLACKLIST = os.getenv("OTS_EMAIL_TLD_BLACKLIST", "").split(",") if os.getenv("OTS_EMAIL_TLD_BLACKLIST") else []
 
     OTS_DELETE_OLD_DATA_SECONDS = int(os.getenv("OTS_DELETE_OLD_DATA_SECONDS", 0))
     OTS_DELETE_OLD_DATA_MINUTES = int(os.getenv("OTS_DELETE_OLD_DATA_MINUTES", 0))

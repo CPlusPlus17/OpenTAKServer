@@ -1,0 +1,23 @@
+{{- if .Values.mumble.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "opentakserver.fullname" . }}-mumble
+  labels:
+    {{- include "opentakserver.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mumble
+spec:
+  type: {{ .Values.mumble.service.type }}
+  ports:
+    - port: {{ .Values.mumble.service.port }}
+      targetPort: mumble-tcp
+      protocol: TCP
+      name: mumble-tcp
+    - port: {{ .Values.mumble.service.port }}
+      targetPort: mumble-udp
+      protocol: UDP
+      name: mumble-udp
+  selector:
+    {{- include "opentakserver.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: mumble
+{{- end }}

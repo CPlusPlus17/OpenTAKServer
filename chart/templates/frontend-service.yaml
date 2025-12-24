@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "opentakserver.fullname" . }}-frontend
+  labels:
+    {{- include "opentakserver.labels" . | nindent 4 }}
+    app.kubernetes.io/component: frontend
+spec:
+  type: {{ .Values.frontend.service.type }}
+  ports:
+    - port: {{ .Values.frontend.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+    - port: 443
+      targetPort: 443
+      protocol: TCP
+      name: https
+    - port: 8080
+      targetPort: marti-http
+      protocol: TCP
+      name: marti-http
+    - port: 8443
+      targetPort: marti-https
+      protocol: TCP
+      name: marti-https
+    - port: 8446
+      targetPort: enrollment
+      protocol: TCP
+      name: enrollment
+  selector:
+    {{- include "opentakserver.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: frontend

@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "opentakserver.fullname" . }}-frontend
+  labels:
+    {{- include "opentakserver.labels" . | nindent 4 }}
+    app.kubernetes.io/component: frontend
+spec:
+  replicas: {{ .Values.frontend.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "opentakserver.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: frontend
+  template:
+    metadata:
+      {{- with .Values.frontend.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "opentakserver.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: frontend
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "opentakserver.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}-frontend
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.frontend.image.repository }}:{{ .Values.frontend.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.frontend.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+            - name: marti-http
+              containerPort: 8080
+              protocol: TCP
+            - name: marti-https
+              containerPort: 8443
+              protocol: TCP
+            - name: enrollment
+              containerPort: 8446
+              protocol: TCP
+          env:
+            - name: BACKEND_HOST
+              value: "{{ include "opentakserver.fullname" . }}-backend"
+            # NGINX_ENVSUBST_OUTPUT_DIR needs to be /etc/nginx for the file to be placed correctly if we override the main conf
+            # But the standard image puts templates from /etc/nginx/templates/*.template into /etc/nginx/conf.d/*.conf
+            # My nginx.conf is a full config (including http block), so it should probably go to /etc/nginx/nginx.conf
+            # I will assume the image handles this logic or I script it. 
+            # Standard nginx image 1.19+ supports NGINX_ENVSUBST_OUTPUT_DIR
+            - name: NGINX_ENVSUBST_OUTPUT_DIR
+              value: "/etc/nginx"
+          resources:
+            {{- toYaml .Values.frontend.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

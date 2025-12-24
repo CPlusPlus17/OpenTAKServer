@@ -1,3 +1,4 @@
+
 FROM python:3.13
 
 RUN addgroup --gid 1024 ots
@@ -6,18 +7,23 @@ RUN apt update && apt install ffmpeg -y
 
 USER ots
 
-WORKDIR /app/opentakserver
+WORKDIR /app
 
-RUN chown -R ots:ots /app
+# Copy the current directory contents into the container at /app
+COPY --chown=ots:ots . .
 
 RUN python -m venv /app/venv
 ENV PATH="/app/venv/bin:$PATH"
 
-# TODO: Install from PyPI
-RUN pip install git+https://github.com/brian7704/OpenTAKServer.git
+# Install dependencies and the package itself from local source
+RUN pip install .
 
-RUN /app/venv/bin/flask --app /app/venv/lib/python3.13/site-packages/opentakserver/app.py ots create-ca
-#RUN /app/venv/bin/flask --app /app/venv/lib/python3.13/site-packages/opentakserver/app.py db upgrade
+# Initialize the application
+# Note: These commands might fail during build if they depend on runtime services (DB), 
+# but create-ca should be fine if it just writes files. 
+# However, usually init scripts are better in an entrypoint script.
+# For now, I will keep create-ca but comment out db upgrade as it was in the original file.
+RUN /app/venv/bin/flask --app opentakserver.app ots create-ca
 
 EXPOSE 8081
 

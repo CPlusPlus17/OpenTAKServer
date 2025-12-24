@@ -1,0 +1,44 @@
+{{- if .Values.mumble.enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "opentakserver.fullname" . }}-mumble
+  labels:
+    {{- include "opentakserver.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mumble
+spec:
+  replicas: {{ .Values.mumble.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "opentakserver.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: mumble
+  template:
+    metadata:
+      labels:
+        {{- include "opentakserver.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: mumble
+    spec:
+      containers:
+        - name: mumble
+          image: "{{ .Values.mumble.image.repository }}:{{ .Values.mumble.image.tag }}"
+          imagePullPolicy: {{ .Values.mumble.image.pullPolicy }}
+          ports:
+            - name: mumble-tcp
+              containerPort: 64738
+              protocol: TCP
+            - name: mumble-udp
+              containerPort: 64738
+              protocol: UDP
+          env:
+            - name: MUMBLE_CONFIG_sslCert
+              value: ""
+            - name: MUMBLE_CONFIG_sslKey
+              value: ""
+            # Allow custom env vars
+            {{- range $key, $value := .Values.mumble.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.mumble.resources | nindent 12 }}
+{{- end }}
