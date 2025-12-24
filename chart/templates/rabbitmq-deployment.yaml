@@ -18,6 +18,10 @@ spec:
         {{- include "opentakserver.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: rabbitmq
     spec:
+      securityContext:
+        fsGroup: 999
+        runAsUser: 999
+        runAsGroup: 999
       containers:
         - name: rabbitmq
           image: "rabbitmq:3-management"

@@ -1,5 +1,5 @@
 
-FROM python:3.13
+FROM docker.io/library/python:3.13
 
 RUN addgroup --gid 1024 ots
 RUN adduser --home /app --disabled-password --gecos "" --force-badname --gid 1024 ots
