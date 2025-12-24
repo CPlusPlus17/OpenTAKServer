@@ -108,7 +108,7 @@ backend:
     # LDAP_BIND_USER_PASSWORD: "password"
     
     # Postgres
-    SQLALCHEMY_DATABASE_URI: "postgresql+psycopg://ots:ots@opentakserver-postgres:5432/ots"
+    SQLALCHEMY_DATABASE_URI: "postgresql+psycopg://ots:ots@{{ include \"opentakserver.fullname\" . }}-postgres:5432/ots"
     # SQLALCHEMY_ECHO: "False"
     
 
