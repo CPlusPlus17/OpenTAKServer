@@ -24,6 +24,7 @@ backend:
   #    memory: 128Mi
   env:
     # Basic Config
+    OTS_LISTENER_ADDRESS: "0.0.0.0"
     OTS_LISTENER_PORT: "8081"
     OTS_LOG_ROTATE_WHEN: "midnight"
 
@@ -130,7 +131,7 @@ frontend:
   resources: {}
 
 ingress:
-  enabled: false
+  enabled: true
   className: ""
   annotations: {}
     # kubernetes.io/ingress.class: nginx
