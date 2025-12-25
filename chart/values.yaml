@@ -177,6 +177,7 @@ rabbitmq:
     password: guest
 
 mediamtx:
+  host: "webrtc.opentakserver.local"
   enabled: true
   image:
     repository: bluenviron/mediamtx

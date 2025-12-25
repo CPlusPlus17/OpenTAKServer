@@ -10,16 +10,14 @@ metadata:
 spec:
   ingressClassName: {{ .Values.ingress.className }}
   rules:
-    {{- range .Values.ingress.hosts }}
-    - host: {{ .host | quote }}
+    - host: {{ .Values.mediamtx.host | quote }}
       http:
         paths:
-          - path: /webrtc
+          - path: /
             pathType: Prefix
             backend:
               service:
-                name: {{ include "opentakserver.fullname" $ }}-mediamtx
+                name: {{ include "opentakserver.fullname" . }}-mediamtx
                 port:
                   number: 8889
-    {{- end }}
 {{- end }}
