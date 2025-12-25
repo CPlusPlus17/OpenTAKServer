@@ -29,6 +29,8 @@ spec:
             {{- end }}
             - name: MTX_EXTERNALAUTHENTICATIONURL
               value: "http://{{ include "opentakserver.fullname" . }}-backend:{{ .Values.backend.service.port }}/api/external_auth"
+            - name: MTX_AUTHMETHOD
+              value: "http"
           ports:
             - name: api
               containerPort: 9997
