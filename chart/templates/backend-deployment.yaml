@@ -51,6 +51,13 @@ spec:
             {{- end }}
           resources:
             {{- toYaml .Values.backend.resources | nindent 12 }}
+          volumeMounts:
+            - name: backend-data
+              mountPath: /app/data
+      volumes:
+        - name: backend-data
+          persistentVolumeClaim:
+            claimName: {{ include "opentakserver.fullname" . }}-backend-data
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

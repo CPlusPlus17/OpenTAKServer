@@ -11,7 +11,9 @@ backend:
     repository: opentakserver-backend
     pullPolicy: IfNotPresent
     tag: "latest"
-  replicaCount: 1
+  persistence:
+    enabled: true
+    size: 1Gi
   service:
     type: LoadBalancer
     port: 8081
@@ -24,6 +26,7 @@ backend:
   #    memory: 128Mi
   env:
     # Basic Config
+    OTS_DATA_FOLDER: "/app/data"
     OTS_LISTENER_ADDRESS: "0.0.0.0"
     OTS_LISTENER_PORT: "8081"
     OTS_LOG_ROTATE_WHEN: "midnight"
@@ -44,7 +47,7 @@ backend:
     # OTS_SSL_STREAMING_PORT: "8089"
     # OTS_BACKUP_COUNT: "7"
     # OTS_COT_PARSER_PROCESSES: "1"
-    OTS_SSL_VERIFICATION_MODE: "0" # ssl.CERT_NONE - Allow password auth without client cert
+    OTS_SSL_VERIFICATION_MODE: "1" # ssl.CERT_OPTIONAL - Allow handshake even if cert is missing/bad (for debugging)
     # OTS_NODE_ID: "" # Auto-generated if empty
     
     # CA Settings
