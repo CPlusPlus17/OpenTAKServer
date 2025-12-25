@@ -44,7 +44,7 @@ spec:
               containerPort: 8889
               protocol: TCP
             - name: webrtc-udp
-              containerPort: 8889
+              containerPort: 8189
               protocol: UDP
           env:
             {{- range $key, $val := .Values.mediamtx.env }}
