@@ -181,6 +181,7 @@ mediamtx:
   enabled: true
   env:
     MTX_WEBRTCADDITIONALHOSTS: "65.109.175.20" # Replace with your External LoadBalancer IP
+    MTX_WEBRTCLOCALUDPADDRESS: "0.0.0.0:8889"
   image:
     repository: bluenviron/mediamtx
     pullPolicy: IfNotPresent
