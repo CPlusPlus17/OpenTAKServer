@@ -149,6 +149,12 @@ ingress:
         - path: /oauth
           pathType: Prefix
           backend: backend
+        - path: /socket.io
+          pathType: Prefix
+          backend: backend
+        - path: /Marti
+          pathType: Prefix
+          backend: backend
   tls: []
   #  - secretName: chart-example-tls
   #    hosts:
