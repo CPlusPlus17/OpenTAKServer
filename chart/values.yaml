@@ -43,7 +43,7 @@ backend:
     # OTS_SSL_STREAMING_PORT: "8089"
     # OTS_BACKUP_COUNT: "7"
     # OTS_COT_PARSER_PROCESSES: "1"
-    # OTS_SSL_VERIFICATION_MODE: "2" # ssl.CERT_REQUIRED
+    OTS_SSL_VERIFICATION_MODE: "0" # ssl.CERT_NONE - Allow password auth without client cert
     # OTS_NODE_ID: "" # Auto-generated if empty
     
     # CA Settings
