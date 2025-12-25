@@ -177,7 +177,7 @@ rabbitmq:
     password: guest
 
 mediamtx:
-  host: "webrtc.opentakserver.local"
+  host: "webrtc.ots-ui.idwd.ch"
   enabled: true
   env:
     MTX_WEBRTCADDITIONALHOSTS: "65.109.175.20" # Replace with your External LoadBalancer IP
