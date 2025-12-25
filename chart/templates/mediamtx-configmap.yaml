@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "opentakserver.fullname" . }}-mediamtx-config
+  labels:
+    {{- include "opentakserver.labels" . | nindent 4 }}
+data:
+  mediamtx.yml: |
+    # API configuration
+    api: yes
+    apiAddress: :9997
+
+    # Authentication
+    authMethod: http
+    authHTTPAddress: http://{{ include "opentakserver.fullname" . }}-backend:{{ .Values.backend.service.port }}/api/external_auth
+    authInternalUsers: yes
+
+    # Protocols
+    rtsp: yes
+    rtspAddress: :8554
+    rtmp: yes
+    rtmpAddress: :1935
+    hls: yes
+    hlsAddress: :8888
+    webrtc: yes
+    webrtcAddress: :8889
+    # WebRTC ICE UDP listener
+    webrtcICEAddress: :8189
+    # WebRTC ICE UDP ports
+    webrtcICEUDP: yes
+    webrtcICEUDPRange: 8189-8189
+    
+    # Public IP for ICE
+    webrtcAdditionalHosts: [{{ .Values.mediamtx.env.MTX_WEBRTCADDITIONALHOSTS }}]
+
+    paths:
+      all:
+        publishUser: "" # Force authentication

@@ -22,36 +22,12 @@ spec:
         - name: mediamtx
           image: "{{ .Values.mediamtx.image.repository }}:{{ .Values.mediamtx.image.tag }}"
           imagePullPolicy: {{ .Values.mediamtx.image.pullPolicy }}
-          env:
-            {{- range $key, $val := .Values.mediamtx.env }}
-            - name: {{ $key }}
-              value: {{ $val | quote }}
-            {{- end }}
-            - name: MTX_AUTHHTTPADDRESS
-              value: "http://{{ include "opentakserver.fullname" . }}-backend:{{ .Values.backend.service.port }}/api/external_auth"
-            - name: MTX_AUTHMETHOD
-              value: "http"
-            - name: MTX_AUTHINTERNALUSERS
-              value: "yes"
           ports:
-            - name: api
-              containerPort: 9997
-              protocol: TCP
-            - name: rtsp
-              containerPort: 8554
-              protocol: TCP
-            - name: rtmp
-              containerPort: 1935
-              protocol: TCP
-            - name: hls
-              containerPort: 8888
-              protocol: TCP
-            - name: webrtc
-              containerPort: 8889
-              protocol: TCP
-            - name: webrtc-udp
-              containerPort: 8189
-              protocol: UDP
           resources:
             {{- toYaml .Values.mediamtx.resources | nindent 12 }}
-{{- end }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "opentakserver.fullname" . }}-mediamtx-config
+
+{{- end -}}
