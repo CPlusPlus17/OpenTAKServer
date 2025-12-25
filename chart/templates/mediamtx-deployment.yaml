@@ -35,6 +35,10 @@ spec:
               value: "yes"
             - name: MTX_APIADDRESS
               value: ":9997"
+          volumeMounts:
+            - name: mediamtx-config
+              mountPath: /mediamtx.yml
+              subPath: mediamtx.yml
           ports:
             - name: api
               containerPort: 9997
@@ -74,4 +78,8 @@ spec:
               protocol: UDP
           resources:
             {{- toYaml .Values.mediamtx.resources | nindent 12 }}
+      volumes:
+        - name: mediamtx-config
+          configMap:
+            name: {{ include "opentakserver.fullname" . }}-mediamtx-config
 {{- end }}

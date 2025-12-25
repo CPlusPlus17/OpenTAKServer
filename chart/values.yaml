@@ -8,8 +8,8 @@ serviceAccount:
 
 backend:
   image:
-    repository: opentakserver-backend
-    pullPolicy: IfNotPresent
+    repository: ghcr.io/cplusplus17/opentakserver-backend
+    pullPolicy: Always
     tag: "latest"
   persistence:
     enabled: true
@@ -33,9 +33,9 @@ backend:
 
     # Flask Settings
     DEBUG: "True"
-    SECRET_KEY: "change-me-please-secret-key-12345" # Fixed key for sessions
-    SECURITY_PASSWORD_SALT: "change-me-please-password-salt-67890" # Fixed salt for passwords
-    
+    SECRET_KEY: "hcdXYQtQuvdECW8amhA6Uwch6JwgwSUQ030EBZnFjZegrUhB2xNW19sA6YjTwnp2" # Fixed key for sessions
+    SECURITY_PASSWORD_SALT: "E4grfgEtnWcnjZefhYHAZdvWtX6zbnYPU75r5BEgr2ggTsTqqab2RGAJ41vcg97J" # Fixed salt for passwords
+
     # OpenTAKServer Settings
     # OTS_DATA_FOLDER: "/app/data" # Need to ensure volume mount matches this if changed
     # OTS_MARTI_HTTP_PORT: "8080"
@@ -49,7 +49,7 @@ backend:
     # OTS_COT_PARSER_PROCESSES: "1"
     OTS_SSL_VERIFICATION_MODE: "1" # ssl.CERT_OPTIONAL - Allow handshake even if cert is missing/bad (for debugging)
     # OTS_NODE_ID: "" # Auto-generated if empty
-    
+
     # CA Settings
     # OTS_CA_NAME: "OpenTAKServer-CA"
     # OTS_CA_PASSWORD: "atakatak"
@@ -59,7 +59,7 @@ backend:
     # OTS_CA_CITY: "YY"
     # OTS_CA_ORGANIZATION: "ZZ"
     # OTS_CA_ORGANIZATIONAL_UNIT: "OpenTAKServer"
-    
+
     # External Data Sources
     # OTS_AIRPLANES_LIVE_LAT: "40.744213"
     # OTS_AIRPLANES_LIVE_LON: "-73.986939"
@@ -71,14 +71,14 @@ backend:
     # OTS_AISHUB_EAST_LON: ""
     # OTS_AISHUB_MMSI_LIST: ""
     # OTS_AISHUB_IMO_LIST: ""
-    
+
     # Plugins & Features
     # OTS_PROFILE_MAP_SOURCES: "True"
     # OTS_ENABLE_MUMBLE_AUTHENTICATION: "False"
     # OTS_ENABLE_PLUGINS: "True"
     # OTS_PLUGIN_REPO: "https://repo.opentakserver.io/brian/prod/"
     # OTS_ENABLE_LDAP: "False"
-    
+
     # Email Settings
     # OTS_ENABLE_EMAIL: "False"
     # MAIL_SERVER: "smtp.gmail.com"
@@ -95,7 +95,7 @@ backend:
     # OTS_EMAIL_DOMAIN_BLACKLIST: "[]"
     # OTS_EMAIL_TLD_WHITELIST: "[]"
     # OTS_EMAIL_TLD_BLACKLIST: "[]"
-    
+
     # Data Management
     # OTS_DELETE_OLD_DATA_SECONDS: "0"
     # OTS_DELETE_OLD_DATA_MINUTES: "0"
@@ -111,23 +111,23 @@ backend:
     # LDAP_GROUP_DN: ""
     # LDAP_BIND_USER_DN: "cn=admin,ou=users=dc=example,dc=com"
     # LDAP_BIND_USER_PASSWORD: "password"
-    
+
     # Postgres
     SQLALCHEMY_DATABASE_URI: "postgresql+psycopg://ots:ots@{{ include \"opentakserver.fullname\" . }}-postgres:5432/ots"
     # SQLALCHEMY_ECHO: "False"
-    
+
 
     # Redis / RabbitMQ (defaults from defaultconfig.py used if not set)
     OTS_RABBITMQ_SERVER_ADDRESS: "{{ include \"opentakserver.fullname\" . }}-rabbitmq"
-    
+
     # MediaMTX
     OTS_MEDIAMTX_API_ADDRESS: "http://ots-opentakserver-mediamtx:9997"
     OTS_MEDIAMTX_TOKEN: "taks-secret-token"
 
 frontend:
   image:
-    repository: opentakserver-ui
-    pullPolicy: IfNotPresent
+    repository: ghcr.io/cplusplus17/opentakserver-ui
+    pullPolicy: Always
     tag: "latest"
   replicaCount: 1
   service:
@@ -142,7 +142,7 @@ ingress:
     # kubernetes.io/ingress.class: nginx
     # cert-manager.io/cluster-issuer: letsencrypt-prod
   hosts:
-    - host: opentakserver.local
+    - host: ots-ui.idwd.ch
       paths:
         - path: /webrtc
           pathType: Prefix
@@ -195,7 +195,7 @@ mediamtx:
   image:
     repository: bluenviron/mediamtx
     pullPolicy: IfNotPresent
-    tag: "latest"
+    tag: "latest-ffmpeg"
   replicaCount: 1
   service:
     type: LoadBalancer
@@ -217,4 +217,3 @@ mumble:
     type: LoadBalancer
     port: 64738
   resources: {}
-

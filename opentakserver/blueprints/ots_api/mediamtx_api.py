@@ -428,6 +428,15 @@ def external_auth():
             v.username = username if username else None
             path_config = MediaMTXPathConfig(None).serialize()
             path_config['sourceOnDemand'] = False
+            
+            # Inject Transcoding Hook for H.264 (iTAK Support)
+            token = app.config.get("OTS_MEDIAMTX_TOKEN")
+            path_config['runOnReady'] = (
+                f"ffmpeg -i rtsp://localhost:$RTSP_PORT/$MTX_PATH?token={token} "
+                f"-c:v libx264 -preset ultrafast -tune zerolatency -b:v 600k -c:a copy "
+                f"-f rtsp rtsp://localhost:$RTSP_PORT/${{MTX_PATH}}_h264?token={token}"
+            )
+            
             v.mediamtx_settings = json.dumps(path_config)
 
             if v.protocol == 'rtsp':
