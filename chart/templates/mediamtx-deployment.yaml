@@ -22,10 +22,19 @@ spec:
         - name: mediamtx
           image: "{{ .Values.mediamtx.image.repository }}:{{ .Values.mediamtx.image.tag }}"
           imagePullPolicy: {{ .Values.mediamtx.image.pullPolicy }}
-          volumeMounts:
-            - name: config
-              mountPath: /mediamtx.yml
-              subPath: mediamtx.yml
+          env:
+            {{- range $key, $val := .Values.mediamtx.env }}
+            - name: {{ $key }}
+              value: {{ $val | quote }}
+            {{- end }}
+            - name: MTX_AUTHHTTPADDRESS
+              value: "http://{{ include "opentakserver.fullname" . }}-backend:{{ .Values.backend.service.port }}/api/external_auth"
+            - name: MTX_AUTHMETHOD
+              value: "http"
+            - name: MTX_API
+              value: "yes"
+            - name: MTX_APIADDRESS
+              value: ":9997"
           ports:
             - name: api
               containerPort: 9997
@@ -47,9 +56,4 @@ spec:
               protocol: UDP
           resources:
             {{- toYaml .Values.mediamtx.resources | nindent 12 }}
-      volumes:
-        - name: config
-          configMap:
-            name: {{ include "opentakserver.fullname" . }}-mediamtx-config
-
-{{- end -}}
+{{- end }}
