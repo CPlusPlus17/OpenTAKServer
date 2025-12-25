@@ -354,59 +354,63 @@ def delete_stream():
 
 
 # This is mainly for mediamtx authentication
+# This is mainly for mediamtx authentication
 @mediamtx_api_blueprint.route('/api/external_auth', methods=['POST'])
 def external_auth():
-    username = bleach.clean(request.json.get('user'))
-    password = bleach.clean(request.json.get('password'))
+    username = bleach.clean(request.json.get('user')) if request.json.get('user') else None
+    password = bleach.clean(request.json.get('password')) if request.json.get('password') else None
     action = bleach.clean(request.json.get('action'))
     query = bleach.clean(request.json.get('query'))
-    ip = bleach.clean(request.json.get('ip'))
+    ip = bleach.clean(request.json.get('ip')) if request.json.get('ip') else None
 
     # Whitelist 127.0.0.1 to make things like YouTube video re-streaming work
     if ip and ip in app.config.get("OTS_IP_WHITELIST"):
         return '', 200
 
+    auth_success = False
+
     # Token auth to prevent high CPU usage when reading HLS streams
-    if 'jwt' in query or 'token' in query:
-        query = query.split("&")
-        for q in query:
+    if query and ('jwt' in query or 'token' in query):
+        query_parts = query.split("&")
+        for q in query_parts:
             if "=" not in q:
                 continue
             key, value = q.split("=")
             if key == 'jwt':
                 try:
                     parse_auth_token(value)
-                    return '', 200
+                    auth_success = True
+                    break
                 except BaseException as e:
                     logger.error(f"Invalid token: {e}")
                     return '', 401
             elif key == 'token':
                 if value == app.config.get("OTS_MEDIAMTX_TOKEN"):
-                    return '', 200
+                    auth_success = True
+                    break
                 else:
                     return '', 401
 
-    auth_success = False
+    if not auth_success:
+        # LDAP Auth
+        if app.config.get("OTS_ENABLE_LDAP"):
+            result = ldap_manager.authenticate(username, password)
+            if result.status == AuthenticationResponseStatus.success:
+                # Keep this import here to avoid a circular import when OTS is started
+                from opentakserver.blueprints.ots_api.ldap_api import save_user
 
-    # LDAP Auth
-    if app.config.get("OTS_ENABLE_LDAP"):
-        result = ldap_manager.authenticate(username, password)
-        if result.status == AuthenticationResponseStatus.success:
-            # Keep this import here to avoid a circular import when OTS is started
-            from opentakserver.blueprints.ots_api.ldap_api import save_user
-
-            save_user(result.user_dn, result.user_id, result.user_info, result.user_groups)
-            auth_success = True
+                save_user(result.user_dn, result.user_id, result.user_info, result.user_groups)
+                auth_success = True
+            else:
+                return '', 401
+        # Flask-Security auth
         else:
-            return '', 401
-    # Flask-Security auth
-    else:
-        user = app.security.datastore.find_user(username=username)
-        if not user:
-            return '', 401
-        if not verify_password(password, user.password):
-            return '', 401
-        auth_success = True
+            user = app.security.datastore.find_user(username=username)
+            if not user:
+                return '', 401
+            if not verify_password(password, user.password):
+                return '', 401
+            auth_success = True
 
     if auth_success:
         if action == 'publish':
@@ -420,7 +424,8 @@ def external_auth():
             v.protocol = bleach.clean(request.json.get('protocol'))
             v.path = bleach.clean(request.json.get('path'))
             v.alias = v.path.split("/")[-1]
-            v.username = bleach.clean(request.json.get('user'))
+            # Ensure username is None if it's empty or None to avoid FK constraint issues
+            v.username = username if username else None
             path_config = MediaMTXPathConfig(None).serialize()
             path_config['sourceOnDemand'] = False
             v.mediamtx_settings = json.dumps(path_config)
@@ -434,7 +439,7 @@ def external_auth():
             else:
                 v.rtsp_reliable = 0
 
-            v.generate_xml(request.json.get("ip"))
+            v.generate_xml(ip)
 
             with app.app_context():
                 try:
@@ -470,10 +475,12 @@ def external_auth():
         logger.debug("external_auth returning 200")
         return '', 200
     elif query:
+        # Fallback check for query params if auth_success wasn't set (though logic above should handle it)
+        # This block might be redundant with the new logic but keeping it for safety if logic flow misses something
         for arg in query.split("&"):
             key, value = arg.split("=")
             if key == 'token' and value == app.config.get("OTS_MEDIAMTX_TOKEN"):
                 return '', 200
-    else:
-        logger.debug("external_auth returning 401")
-        return '', 401
+    
+    logger.debug("external_auth returning 401")
+    return '', 401
