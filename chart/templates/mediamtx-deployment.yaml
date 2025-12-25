@@ -22,6 +22,10 @@ spec:
         - name: mediamtx
           image: "{{ .Values.mediamtx.image.repository }}:{{ .Values.mediamtx.image.tag }}"
           imagePullPolicy: {{ .Values.mediamtx.image.pullPolicy }}
+          env:
+            {{- if .Values.mediamtx.env }}
+              {{- toYaml .Values.mediamtx.env | nindent 12 }}
+            {{- end }}
           ports:
             - name: api
               containerPort: 9997

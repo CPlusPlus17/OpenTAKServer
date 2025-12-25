@@ -179,6 +179,8 @@ rabbitmq:
 mediamtx:
   host: "webrtc.opentakserver.local"
   enabled: true
+  env:
+    MTX_WEBRTCICEHOSTNAT1TO1IPS: "65.109.175.20" # Replace with your External LoadBalancer IP
   image:
     repository: bluenviron/mediamtx
     pullPolicy: IfNotPresent
