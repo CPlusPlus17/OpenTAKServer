@@ -41,7 +41,7 @@ backend:
     DEBUG: "True"
     SECRET_KEY: "hcdXYQtQuvdECW8amhA6Uwch6JwgwSUQ030EBZnFjZegrUhB2xNW19sA6YjTwnp2" # Fixed key for sessions
     SECURITY_PASSWORD_SALT: "E4grfgEtnWcnjZefhYHAZdvWtX6zbnYPU75r5BEgr2ggTsTqqab2RGAJ41vcg97J" # Fixed salt for passwords
-
+    
     # OpenTAKServer Settings
     # OTS_DATA_FOLDER: "/app/data" # Need to ensure volume mount matches this if changed
     # OTS_MARTI_HTTP_PORT: "8080"
