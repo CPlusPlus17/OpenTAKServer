@@ -13,7 +13,6 @@ data:
     # Authentication
     authMethod: http
     authHTTPAddress: http://{{ include "opentakserver.fullname" . }}-backend:{{ .Values.backend.service.port }}/api/external_auth
-    authInternalUsers: yes
 
     # Protocols
     rtsp: yes
