@@ -27,7 +27,10 @@ RUN /app/venv/bin/flask --app opentakserver.app ots create-ca
 
 EXPOSE 8081
 
-ENTRYPOINT ["opentakserver"]
+COPY --chown=ots:ots entrypoint.sh .
+RUN chmod +x entrypoint.sh
+
+ENTRYPOINT ["./entrypoint.sh"]
 
 # Flask will stop gracefully on SIGINT (Ctrl-C).
 # Docker compose tries to stop processes using SIGTERM by default, then sends SIGKILL after a delay if the process doesn't stop.

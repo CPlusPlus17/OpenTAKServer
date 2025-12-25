@@ -29,7 +29,7 @@ backend:
     OTS_LOG_ROTATE_WHEN: "midnight"
 
     # Flask Settings
-    # DEBUG: "False"
+    DEBUG: "True"
     SECRET_KEY: "change-me-please-secret-key-12345" # Fixed key for sessions
     SECURITY_PASSWORD_SALT: "change-me-please-password-salt-67890" # Fixed salt for passwords
     
