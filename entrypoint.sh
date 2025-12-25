@@ -3,6 +3,14 @@ set -e
 
 echo "Starting OpenTAKServer Processes..."
 
+# Wait for RabbitMQ to be ready
+echo "Waiting for RabbitMQ..."
+until /app/venv/bin/python -c "import socket; s = socket.socket(socket.AF_INET, socket.SOCK_STREAM); s.connect(('${OTS_RABBITMQ_SERVER_ADDRESS}', 5672))"; do
+    echo "RabbitMQ not ready, retrying in 2s..."
+    sleep 2
+done
+echo "RabbitMQ is up!"
+
 # Start CoT Parser (Processes messages from RabbitMQ)
 echo "Starting CoT Parser..."
 cot_parser &
