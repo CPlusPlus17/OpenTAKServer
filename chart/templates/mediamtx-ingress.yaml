@@ -1,0 +1,25 @@
+{{- if .Values.mediamtx.enabled -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "opentakserver.fullname" . }}-mediamtx
+  labels:
+    {{- include "opentakserver.labels" . | nindent 4 }}
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: {{ .Release.Namespace }}-{{ include "opentakserver.fullname" . }}-strip-webrtc@kubernetescrd
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  rules:
+    {{- range .Values.ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          - path: /webrtc
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "opentakserver.fullname" $ }}-mediamtx
+                port:
+                  number: 8889
+    {{- end }}
+{{- end }}

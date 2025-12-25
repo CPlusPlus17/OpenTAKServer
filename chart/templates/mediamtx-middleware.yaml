@@ -1,0 +1,10 @@
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: {{ include "opentakserver.fullname" . }}-strip-webrtc
+  labels:
+    {{- include "opentakserver.labels" . | nindent 4 }}
+spec:
+  stripPrefix:
+    prefixes:
+      - /webrtc
