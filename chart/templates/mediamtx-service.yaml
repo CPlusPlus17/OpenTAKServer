@@ -41,6 +41,22 @@ spec:
       targetPort: 8001
       protocol: UDP
       name: rtcp
+    - port: 8002
+      targetPort: 8002
+      protocol: UDP
+      name: rtp-2
+    - port: 8003
+      targetPort: 8003
+      protocol: UDP
+      name: rtcp-2
+    - port: 8004
+      targetPort: 8004
+      protocol: UDP
+      name: rtp-3
+    - port: 8005
+      targetPort: 8005
+      protocol: UDP
+      name: rtcp-3
     - port: 8189
       targetPort: webrtc-udp
       protocol: UDP
