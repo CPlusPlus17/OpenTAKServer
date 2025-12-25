@@ -8,3 +8,4 @@ spec:
   stripPrefix:
     prefixes:
       - /webrtc
+      - /hls
