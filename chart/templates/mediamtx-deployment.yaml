@@ -38,6 +38,9 @@ spec:
             - name: webrtc
               containerPort: 8889
               protocol: TCP
+            - name: webrtc-udp
+              containerPort: 8889
+              protocol: UDP
           resources:
             {{- toYaml .Values.mediamtx.resources | nindent 12 }}
 {{- end }}

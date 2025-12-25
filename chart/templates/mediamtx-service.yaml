@@ -41,8 +41,8 @@ spec:
       targetPort: 8001
       protocol: UDP
       name: rtcp
-    - port: 8189
-      targetPort: 8189
+    - port: {{ .Values.mediamtx.service.webrtcPort }}
+      targetPort: webrtc-udp
       protocol: UDP
       name: webrtc-udp
     - port: 8322
