@@ -36,9 +36,9 @@ spec:
             pathType: {{ .pathType }}
             backend:
               service:
-                name: {{ if eq .backend "backend" }}{{ $fullName }}-backend{{ else }}{{ $fullName }}-frontend{{ end }}
+                name: {{ if .serviceName }}{{ .serviceName }}{{ else }}{{ if eq .backend "backend" }}{{ $fullName }}-backend{{ else }}{{ $fullName }}-frontend{{ end }}{{ end }}
                 port:
-                  number: {{ if eq .backend "backend" }}{{ $svcBackendPort }}{{ else }}{{ $svcFrontendPort }}{{ end }}
+                  number: {{ if .servicePort }}{{ .servicePort }}{{ else }}{{ if eq .backend "backend" }}{{ $svcBackendPort }}{{ else }}{{ $svcFrontendPort }}{{ end }}{{ end }}
           {{- end }}
     {{- end }}
 {{- end }}

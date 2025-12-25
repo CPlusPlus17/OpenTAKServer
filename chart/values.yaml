@@ -144,6 +144,16 @@ ingress:
   hosts:
     - host: opentakserver.local
       paths:
+        - path: /webrtc
+          pathType: Prefix
+          backend: custom
+          serviceName: ots-opentakserver-mediamtx
+          servicePort: 8889
+        - path: /hls
+          pathType: Prefix
+          backend: custom
+          serviceName: ots-opentakserver-mediamtx
+          servicePort: 8888
         - path: /
           pathType: Prefix
           backend: frontend
