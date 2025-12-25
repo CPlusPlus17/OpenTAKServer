@@ -8,10 +8,14 @@ metadata:
   name: {{ $fullName }}
   labels:
     {{- include "opentakserver.labels" . | nindent 4 }}
-  {{- with .Values.ingress.annotations }}
-  annotations:
-    {{- toYaml . | nindent 4 }}
   {{- end }}
+  annotations:
+    {{- if .Values.mediamtx.enabled }}
+    traefik.ingress.kubernetes.io/router.middlewares: {{ .Release.Namespace }}-{{ include "opentakserver.fullname" . }}-strip-webrtc@kubernetescrd
+    {{- end }}
+    {{- with .Values.ingress.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
 spec:
   {{- if .Values.ingress.className }}
   ingressClassName: {{ .Values.ingress.className }}
