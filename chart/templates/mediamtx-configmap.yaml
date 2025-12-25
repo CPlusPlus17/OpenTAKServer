@@ -23,8 +23,6 @@ data:
     hlsAddress: :8888
     webrtc: yes
     webrtcAddress: :8889
-    # WebRTC ICE UDP listener
-    webrtcICEAddress: :8189
     # WebRTC ICE UDP ports
     webrtcICEUDP: yes
     webrtcICEUDPRange: 8189-8189
