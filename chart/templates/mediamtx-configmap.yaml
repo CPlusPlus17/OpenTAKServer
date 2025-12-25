@@ -30,4 +30,7 @@ data:
     # Public IP for ICE
     webrtcAdditionalHosts: [{{ .Values.mediamtx.env.MTX_WEBRTCADDITIONALHOSTS }}]
 
+    paths:
+      all:
+
 
