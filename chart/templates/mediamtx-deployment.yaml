@@ -51,6 +51,24 @@ spec:
             - name: webrtc
               containerPort: 8889
               protocol: TCP
+            - name: rtp
+              containerPort: 8000
+              protocol: UDP
+            - name: rtcp
+              containerPort: 8001
+              protocol: UDP
+            - name: rtp-2
+              containerPort: 8002
+              protocol: UDP
+            - name: rtcp-2
+              containerPort: 8003
+              protocol: UDP
+            - name: rtp-3
+              containerPort: 8004
+              protocol: UDP
+            - name: rtcp-3
+              containerPort: 8005
+              protocol: UDP
             - name: webrtc-udp
               containerPort: 8189
               protocol: UDP
