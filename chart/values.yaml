@@ -122,6 +122,7 @@ backend:
     
     # MediaMTX
     OTS_MEDIAMTX_API_ADDRESS: "http://{{ include \"opentakserver.fullname\" . }}-mediamtx:9997"
+    OTS_MEDIAMTX_TOKEN: "taks-secret-token"
 
 frontend:
   image:
