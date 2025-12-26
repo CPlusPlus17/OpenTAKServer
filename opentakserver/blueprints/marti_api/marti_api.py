@@ -24,10 +24,27 @@ marti_api = Blueprint('marti_api', __name__)
 def verify_client_cert() -> X509 | bool:
     cert_header = app.config.get("OTS_SSL_CERT_HEADER")
     if cert_header not in request.headers:
+        logger.debug(f"Verify Client Cert: Missing header {cert_header}")
         return False
 
-    cert = unquote(request.headers.get(cert_header))
-    cert = crypto.load_certificate(crypto.FILETYPE_PEM, cert)
+    raw_cert_header = request.headers.get(cert_header)
+
+    # Handle comma-separated list (Traefik can do this)
+    if ',' in raw_cert_header:
+        raw_cert_header = raw_cert_header.split(',')[0]
+
+    cert = unquote(raw_cert_header).strip()
+
+    # Add PEM headers if missing (Traefik often sends raw base64)
+    if not cert.startswith("-----BEGIN"):
+        cert = f"-----BEGIN CERTIFICATE-----\n{cert}\n-----END CERTIFICATE-----"
+
+    try:
+        cert = crypto.load_certificate(crypto.FILETYPE_PEM, cert)
+    except Exception as e:
+        logger.debug(f"Verify Client Cert: Failed to load cert: {e}")
+        return False
+
     with open(os.path.join(app.config.get("OTS_CA_FOLDER"), "ca.pem"), 'rb') as f:
         ca_cert = crypto.load_certificate(crypto.FILETYPE_PEM, f.read())
 
@@ -38,7 +55,8 @@ def verify_client_cert() -> X509 | bool:
     try:
         ctx.verify_certificate()
         return cert
-    except crypto.X509StoreContextError:
+    except crypto.X509StoreContextError as e:
+        logger.debug(f"Verify Client Cert: Verification failed: {e}")
         return False
 
 

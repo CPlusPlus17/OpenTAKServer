@@ -1,0 +1,23 @@
+{{- if .Values.ingress.enabled -}}
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: {{ include "opentakserver.fullname" . }}-ots-pass-cert
+  labels:
+    {{- include "opentakserver.labels" . | nindent 4 }}
+spec:
+  passTLSClientCert:
+    pem: true
+---
+apiVersion: traefik.io/v1alpha1
+kind: TLSOption
+metadata:
+  name: {{ include "opentakserver.fullname" . }}-ots-mtls
+  labels:
+    {{- include "opentakserver.labels" . | nindent 4 }}
+spec:
+  clientAuth:
+    clientAuthType: RequestClientCert
+    secretNames:
+      - ots-ca-secret
+{{- end }}

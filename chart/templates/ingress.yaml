@@ -10,9 +10,12 @@ metadata:
     {{- include "opentakserver.labels" . | nindent 4 }}
 
   annotations:
+    traefik.ingress.kubernetes.io/router.tls.options: {{ .Release.Namespace }}-{{ include "opentakserver.fullname" . }}-ots-mtls@kubernetescrd
+    {{- $middlewares := list (printf "%s-%s-ots-pass-cert@kubernetescrd" .Release.Namespace (include "opentakserver.fullname" .)) }}
     {{- if .Values.mediamtx.enabled }}
-    traefik.ingress.kubernetes.io/router.middlewares: {{ .Release.Namespace }}-{{ include "opentakserver.fullname" . }}-strip-webrtc@kubernetescrd
+    {{- $middlewares = append $middlewares (printf "%s-%s-strip-webrtc@kubernetescrd" .Release.Namespace (include "opentakserver.fullname" .)) }}
     {{- end }}
+    traefik.ingress.kubernetes.io/router.middlewares: {{ join "," $middlewares }}
     {{- with .Values.ingress.annotations }}
     {{- toYaml . | nindent 4 }}
     {{- end }}
