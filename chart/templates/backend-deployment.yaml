@@ -25,6 +25,17 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      initContainers:
+        - name: fix-permissions
+          image: busybox
+          command: ["sh", "-c", "chown -R 1024:1024 /app/data && chown -R 1024:1024 /recordings"]
+          securityContext:
+            runAsUser: 0
+          volumeMounts:
+            - name: backend-data
+              mountPath: /app/data
+            - name: recordings
+              mountPath: /recordings
       serviceAccountName: {{ include "opentakserver.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
@@ -55,7 +66,7 @@ spec:
             - name: backend-data
               mountPath: /app/data
             - name: recordings
-              mountPath: /app/data/mediamtx/recordings
+              mountPath: /recordings
       volumes:
         - name: backend-data
           persistentVolumeClaim:

@@ -1,39 +1,68 @@
+# Stage 1: Builder
+FROM python:3.12-slim-bookworm as builder
 
-FROM docker.io/library/python:3.12
-
-RUN addgroup --gid 1024 ots
-RUN adduser --home /app --disabled-password --gecos "" --force-badname --gid 1024 ots
-RUN apt update && apt install ffmpeg -y
-
-USER ots
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
 
 WORKDIR /app
 
-# Copy the current directory contents into the container at /app
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    git \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install poetry
+RUN pip install poetry
+
+# Copy only dependency files first to leverage cache
+COPY pyproject.toml poetry.lock ./
+# Copy lib to allow dynamic versioning if needed
+COPY . .
+
+# Configure poetry to create venv in project
+ENV POETRY_VIRTUALENVS_IN_PROJECT=true
+
+# Install dependencies and the project itself
+# We use --only main to exclude test dependencies
+# Force lock update because local lock might be out of sync
+RUN poetry lock --no-interaction --no-ansi
+RUN poetry install --no-interaction --no-ansi --only main
+
+# Stage 2: Runtime
+FROM python:3.12-slim-bookworm
+
+# Create ots user
+RUN addgroup --gid 1024 ots \
+    && adduser --home /app --disabled-password --gecos "" --force-badname --uid 1024 --gid 1024 ots
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
+    curl \
+    libpq5 \
+    && rm -rf /var/lib/apt/lists/*
+
+USER ots
+WORKDIR /app
+
+# Copy virtual environment from builder (Poetry creates .venv)
+COPY --from=builder --chown=ots:ots /app/.venv /app/venv
+
+# Copy application code
 COPY --chown=ots:ots . .
 
-RUN python -m venv /app/venv
+# Set environment to use venv
 ENV PATH="/app/venv/bin:$PATH"
-
-# Install dependencies and the package itself from local source
-RUN pip install .
-
-# Initialize the application
-# Note: These commands might fail during build if they depend on runtime services (DB), 
-# but create-ca should be fine if it just writes files. 
-# However, usually init scripts are better in an entrypoint script.
-# For now, I will keep create-ca but comment out db upgrade as it was in the original file.
-RUN /app/venv/bin/flask --app opentakserver.app ots create-ca
 
 EXPOSE 8081
 
-COPY --chown=ots:ots entrypoint.sh .
+# Ensure entrypoint is executable (should be from COPY, but just in case)
 RUN chmod +x entrypoint.sh
+
+HEALTHCHECK --interval=1m CMD curl --fail http://localhost:8081/api/health || exit 1
 
 ENTRYPOINT ["./entrypoint.sh"]
 
-# Flask will stop gracefully on SIGINT (Ctrl-C).
-# Docker compose tries to stop processes using SIGTERM by default, then sends SIGKILL after a delay if the process doesn't stop.
 STOPSIGNAL SIGINT
-
-HEALTHCHECK --interval=1m CMD curl --fail http://localhost:8081/api/health || exit 1

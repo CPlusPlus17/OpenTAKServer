@@ -25,12 +25,12 @@ def thumbnail():
     if not path:
         return jsonify({"success": False, "error": "Please specify a path"}), 400
 
-    if recording and os.path.exists(os.path.join(app.config.get("OTS_DATA_FOLDER"), "mediamtx", "recordings", path, recording + ".png")):
-        return send_from_directory(os.path.join(app.config.get("OTS_DATA_FOLDER"), "mediamtx", "recordings", path),
+    if recording and os.path.exists(os.path.join("/recordings", path, recording + ".png")):
+        return send_from_directory(os.path.join("/recordings", path),
                                    recording + ".png")
 
-    elif os.path.exists(os.path.join(app.config.get("OTS_DATA_FOLDER"), "mediamtx", "recordings", path)):
-        return send_from_directory(os.path.join(app.config.get("OTS_DATA_FOLDER"), "mediamtx", "recordings", path),
+    elif os.path.exists(os.path.join("/recordings", path)):
+        return send_from_directory(os.path.join("/recordings", path),
                                    "thumbnail.png")
 
     return jsonify({"success": False, "error": gettext(u"Please specify a valid path")}), 400
@@ -65,7 +65,11 @@ def download_recording():
             filename = pathlib.Path(recording.segment_path)
             return send_from_directory(filename.parent, filename.name)
         elif request.method == 'DELETE':
-            os.remove(recording.segment_path)
+            if os.path.exists(recording.segment_path):
+                os.remove(recording.segment_path)
+            else:
+                logger.warning(f"File {recording.segment_path} not found, deleting DB entry anyway.")
+            
             db.session.delete(recording)
             db.session.commit()
             return jsonify({'success': True})

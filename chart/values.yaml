@@ -1,6 +1,12 @@
 global:
   domain: opentakserver.local
 
+podSecurityContext:
+  fsGroup: 1024
+
+securityContext: {}
+
+
 serviceAccount:
   create: true
   annotations: {}

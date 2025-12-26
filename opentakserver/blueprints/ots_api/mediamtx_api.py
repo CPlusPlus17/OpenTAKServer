@@ -60,7 +60,7 @@ def inject_recording_hooks(settings):
             r = requests.get("{}/v3/config/global/get".format(app.config.get("OTS_MEDIAMTX_API_ADDRESS")))
             if r.status_code == 200:
                 global_conf = r.json()
-                auth_webhook = global_conf.get('authWebhook')
+                auth_webhook = global_conf.get('authHTTPAddress') or global_conf.get('authWebhook')
                 if auth_webhook:
                     # Extract base URL
                     parsed = urlparse(auth_webhook)
@@ -69,13 +69,15 @@ def inject_recording_hooks(settings):
                     webhook_url = f"{base_url}/api/mediamtx/webhook"
                     token = app.config.get("OTS_MEDIAMTX_TOKEN")
                     
-                    cmd_create = f"curl -s \"{webhook_url}?event=segment_record&path=$MTX_PATH&segment_path=$MTX_SEGMENT_PATH&token={token}\""
-                    cmd_complete = f"curl -s \"{webhook_url}?event=segment_record_complete&path=$MTX_PATH&segment_path=$MTX_SEGMENT_PATH&token={token}\""
+                    # Use wget because curl is not available in bluenviron/mediamtx:latest-ffmpeg (Alpine)
+                    # Redirect output to file for debugging
+                    cmd_create = f"/usr/bin/wget -S -O - \"{webhook_url}?event=segment_record&path=$MTX_PATH&segment_path=$MTX_SEGMENT_PATH&token={token}\" >> /recordings/wget.log 2>&1"
+                    cmd_complete = f"/usr/bin/wget -S -O - \"{webhook_url}?event=segment_record_complete&path=$MTX_PATH&segment_path=$MTX_SEGMENT_PATH&token={token}\" >> /recordings/wget.log 2>&1"
                     
                     settings['runOnRecordSegmentCreate'] = cmd_create
                     settings['runOnRecordSegmentComplete'] = cmd_complete
                     # Force absolute path for recordings to ensure they are written to the shared volume
-                    settings['recordPath'] = "/app/data/mediamtx/recordings/%path/%Y-%m-%d_%H-%M-%S-%f"
+                    settings['recordPath'] = "/recordings/%path/%Y-%m-%d_%H-%M-%S-%f"
                     logger.debug("Injected recording hooks for path")
         except Exception as e:
             logger.error(f"Failed to inject recording hooks: {e}")
@@ -195,15 +197,15 @@ def mediamtx_webhook():
             db.session.commit()
 
         if event == 'ready':
-            os.makedirs(os.path.join(app.config.get('OTS_DATA_FOLDER'), "mediamtx", "recordings", video_stream.path),
+            os.makedirs(os.path.join("/recordings", video_stream.path),
                         exist_ok=True)
 
             try:
                 (FFmpeg().input(
-                    video_stream.to_json()['rtsp_link'] + "?token={}".format(token))
-                 .option("y")
-                 .output(os.path.join(app.config.get('OTS_DATA_FOLDER'), "mediamtx", "recordings", video_stream.path,
-                                      "thumbnail.png"), {"frames:v": 1}).execute())
+                     video_stream.to_json()['rtsp_link'] + "?token={}".format(token))
+                  .option("y")
+                  .output(os.path.join("/recordings", video_stream.path,
+                                       "thumbnail.png"), {"frames:v": 1}).execute())
             except BaseException as e:
                 logger.error(f"Failed to create thumbnail: {e}")
                 logger.debug(traceback.format_exc())

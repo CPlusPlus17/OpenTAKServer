@@ -18,6 +18,10 @@ spec:
         {{- include "opentakserver.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: mediamtx
     spec:
+      securityContext:
+        fsGroup: 1024
+        runAsUser: 1024
+        runAsGroup: 1024
       containers:
         - name: mediamtx
           image: "{{ .Values.mediamtx.image.repository }}:{{ .Values.mediamtx.image.tag }}"
@@ -78,7 +82,7 @@ spec:
 
           volumeMounts:
             - name: recordings
-              mountPath: /app/data/mediamtx/recordings
+              mountPath: /recordings
       volumes:
         - name: recordings
           persistentVolumeClaim:
