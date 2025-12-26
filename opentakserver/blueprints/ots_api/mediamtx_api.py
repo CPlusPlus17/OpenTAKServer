@@ -54,35 +54,38 @@ def inject_recording_hooks(settings):
     Injects runOnRecordSegmentCreate and runOnRecordSegmentComplete hooks into the MediaMTX stream settings
     if recording is enabled. This ensures the backend is notified when a recording segment is created.
     """
-    if settings.get('record'):
-        try:
-            # Fetch global config to find the backend webhook URL
-            r = requests.get("{}/v3/config/global/get".format(app.config.get("OTS_MEDIAMTX_API_ADDRESS")))
-            if r.status_code == 200:
-                global_conf = r.json()
-                auth_webhook = global_conf.get('authHTTPAddress') or global_conf.get('authWebhook')
-                if auth_webhook:
-                    # Extract base URL
-                    parsed = urlparse(auth_webhook)
-                    base_url = f"{parsed.scheme}://{parsed.netloc}"
-                    
-                    webhook_url = f"{base_url}/api/mediamtx/webhook"
-                    token = os.environ.get("OTS_MEDIAMTX_TOKEN", app.config.get("OTS_MEDIAMTX_TOKEN"))
-                    
-                    # Use wget because curl is not available in bluenviron/mediamtx:latest-ffmpeg (Alpine)
-                    # Redirect output to file for debugging
-                    cmd_create = f"/usr/bin/wget -S -O - \"{webhook_url}?event=segment_record&path=$MTX_PATH&segment_path=$MTX_SEGMENT_PATH&token={token}\" >> /recordings/wget.log 2>&1"
-                    cmd_complete = f"/usr/bin/wget -S -O - \"{webhook_url}?event=segment_record_complete&path=$MTX_PATH&segment_path=$MTX_SEGMENT_PATH&token={token}\" >> /recordings/wget.log 2>&1"
-                    cmd_ready = f"/usr/bin/wget -S -O - \"{webhook_url}?event=ready&path=$MTX_PATH&rtsp_port=$MTX_RTSP_PORT&token={token}\" >> /recordings/wget.log 2>&1"
+    try:
+        # Fetch global config to find the backend webhook URL
+        r = requests.get("{}/v3/config/global/get".format(app.config.get("OTS_MEDIAMTX_API_ADDRESS")))
+        if r.status_code == 200:
+            global_conf = r.json()
+            auth_webhook = global_conf.get('authHTTPAddress') or global_conf.get('authWebhook')
+            if auth_webhook:
+                # Extract base URL
+                parsed = urlparse(auth_webhook)
+                base_url = f"{parsed.scheme}://{parsed.netloc}"
+                
+                webhook_url = f"{base_url}/api/mediamtx/webhook"
+                token = os.environ.get("OTS_MEDIAMTX_TOKEN", app.config.get("OTS_MEDIAMTX_TOKEN"))
+                
+                # Use wget because curl is not available in bluenviron/mediamtx:latest-ffmpeg (Alpine)
+                # Redirect output to file for debugging
+                # Wrap in sh -c to ensure redirection works and arguments are parsed correctly
+                cmd_ready = f"sh -c '/usr/bin/wget -S -O - \"{webhook_url}?event=ready&path=$MTX_PATH&rtsp_port=$MTX_RTSP_PORT&token={token}\" >> /recordings/wget.log 2>&1'"
+                settings['runOnReady'] = cmd_ready
+                
+                if settings.get('record'):
+                    cmd_create = f"sh -c '/usr/bin/wget -S -O - \"{webhook_url}?event=segment_record&path=$MTX_PATH&segment_path=$MTX_SEGMENT_PATH&token={token}\" >> /recordings/wget.log 2>&1'"
+                    cmd_complete = f"sh -c '/usr/bin/wget -S -O - \"{webhook_url}?event=segment_record_complete&path=$MTX_PATH&segment_path=$MTX_SEGMENT_PATH&token={token}\" >> /recordings/wget.log 2>&1'"
                     
                     settings['runOnRecordSegmentCreate'] = cmd_create
                     settings['runOnRecordSegmentComplete'] = cmd_complete
-                    settings['runOnReady'] = cmd_ready
                     # Force absolute path for recordings to ensure they are written to the shared volume
                     settings['recordPath'] = "/recordings/%path/%Y-%m-%d_%H-%M-%S-%f"
-                    logger.debug("Injected recording hooks for path")
-        except Exception as e:
-            logger.error(f"Failed to inject recording hooks: {e}")
+                    
+                logger.debug("Injected hooks for path")
+    except Exception as e:
+        logger.error(f"Failed to inject recording hooks: {e}")
 
 
 
@@ -147,11 +150,11 @@ def mediamtx_webhook():
         connection_id = bleach.clean(request.args.get("connection_id"))
         rtsp_port = bleach.clean(request.args.get("rtsp_port"))
     elif event == 'ready' or event == 'notready':
-        rtsp_port = bleach.clean(request.args.get("rtsp_port"))
-        path = bleach.clean(request.args.get("path"))
-        query = bleach.clean(request.args.get("query"))
-        source_type = bleach.clean(request.args.get("source_type"))
-        source_id = bleach.clean(request.args.get("source_id"))
+        rtsp_port = bleach.clean(request.args.get("rtsp_port", ""))
+        path = bleach.clean(request.args.get("path", ""))
+        query = bleach.clean(request.args.get("query", ""))
+        source_type = bleach.clean(request.args.get("source_type", ""))
+        source_id = bleach.clean(request.args.get("source_id", ""))
 
         video_stream = db.session.query(VideoStream).where(VideoStream.path == path).first()
         if video_stream:
@@ -205,8 +208,20 @@ def mediamtx_webhook():
                         exist_ok=True)
 
             try:
-                (FFmpeg().input(
-                     video_stream.to_json()['rtsp_link'] + "?token={}".format(token))
+                # Use internal address for thumbnail generation
+                mtx_api_parsed = urlparse(app.config.get("OTS_MEDIAMTX_API_ADDRESS"))
+                mtx_host = mtx_api_parsed.hostname
+
+                internal_rtsp_url = "rtsp://{}:{}/{}?token={}".format(
+                    mtx_host,
+                    video_stream.port,
+                    video_stream.path,
+                    token
+                )
+
+                logger.debug(f"Generating thumbnail from: {internal_rtsp_url}")
+
+                (FFmpeg().input(internal_rtsp_url)
                   .option("y")
                   .output(os.path.join("/recordings", video_stream.path,
                                        "thumbnail.png"), {"frames:v": 1}).execute())
@@ -402,14 +417,17 @@ def delete_stream():
 # This is mainly for mediamtx authentication
 @mediamtx_api_blueprint.route('/api/external_auth', methods=['POST'])
 def external_auth():
-    username = bleach.clean(request.json.get('user')) if request.json.get('user') else None
-    password = bleach.clean(request.json.get('password')) if request.json.get('password') else None
-    action = bleach.clean(request.json.get('action'))
-    query = bleach.clean(request.json.get('query'))
-    ip = bleach.clean(request.json.get('ip')) if request.json.get('ip') else None
+    username = bleach.clean(request.json.get('user', '')) if request.json.get('user') else None
+    password = bleach.clean(request.json.get('password', '')) if request.json.get('password') else None
+    action = bleach.clean(request.json.get('action', ''))
+    query = bleach.clean(request.json.get('query', ''))
+    ip = bleach.clean(request.json.get('ip', '')) if request.json.get('ip') else None
+
+    logger.debug(f"External Auth: action={action} user={username} query={query} ip={ip}")
 
     # Whitelist 127.0.0.1 to make things like YouTube video re-streaming work
     if ip and ip in app.config.get("OTS_IP_WHITELIST"):
+        logger.debug(f"External Auth: IP {ip} in whitelist")
         return '', 200
 
     auth_success = False
@@ -425,15 +443,25 @@ def external_auth():
                 try:
                     parse_auth_token(value)
                     auth_success = True
+                    logger.debug("External Auth: JWT success")
                     break
                 except BaseException as e:
                     logger.error(f"Invalid token: {e}")
                     return '', 401
             elif key == 'token':
-                if value == app.config.get("OTS_MEDIAMTX_TOKEN"):
+                # Prioritize environment variable to ensure consistency with what's injected into hooks
+                expected_token = os.environ.get("OTS_MEDIAMTX_TOKEN", app.config.get("OTS_MEDIAMTX_TOKEN"))
+                
+                # Strip potential whitespace
+                if expected_token:
+                    expected_token = expected_token.strip()
+                
+                if value and value.strip() == expected_token:
                     auth_success = True
+                    logger.debug("External Auth: Token success")
                     break
                 else:
+                    logger.warning(f"External Auth: Token mismatch. Received: '{value}' Expected: '{expected_token}'")
                     return '', 401
 
     if not auth_success:
