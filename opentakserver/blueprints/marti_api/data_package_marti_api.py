@@ -235,8 +235,13 @@ def data_package_search():
         submission_user = "anonymous"
         if dp.user:
             submission_user = dp.user.username
+
+        # Try to find matching MissionContent to get the original Client UUID
+        mission_content = db.session.execute(db.select(MissionContent).filter_by(hash=dp.hash)).scalars().first()
+        package_uid = mission_content.uid if mission_content else dp.hash
+
         res['results'].append(
-            {'UID': dp.hash, 'Name': dp.filename, 'Hash': dp.hash, 'CreatorUid': dp.creator_uid,
+            {'UID': package_uid, 'Name': dp.filename, 'Hash': dp.hash, 'CreatorUid': dp.creator_uid,
              "SubmissionDateTime": dp.submission_time.strftime('%Y-%m-%dT%H:%M:%S.000Z'), "EXPIRATION": "-1",
              "Keywords": ["missionpackage"],
              "MIMEType": dp.mime_type, "Size": "{}".format(dp.size), "SubmissionUser": submission_user,

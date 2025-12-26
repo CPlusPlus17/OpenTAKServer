@@ -40,7 +40,7 @@ class EUD(db.Model):
     chatroom_uid = relationship("ChatroomsUids", cascade="all, delete-orphan", back_populates="eud")
     user = relationship("User", back_populates="euds")
     alert = relationship("Alert", cascade="all, delete-orphan", back_populates="eud")
-    data_packages = relationship("DataPackage", cascade="all, delete-orphan", back_populates="eud", uselist=False)
+    data_packages = relationship("DataPackage", cascade="all, delete-orphan", back_populates="eud")
     certificate = relationship("Certificate", cascade="all, delete, delete-orphan", back_populates="eud", uselist=False)
     markers = relationship("Marker", cascade="all, delete, delete-orphan", back_populates="eud")
     rb_lines = relationship("RBLine", cascade="all, delete-orphan", back_populates="eud")
@@ -83,6 +83,6 @@ class EUD(db.Model):
             'team': self.team.name if self.team else None,
             'team_color': self.team.get_team_color() if self.team else None,
             'team_role': self.team_role,
-            'data_packages': self.data_packages.to_json(False) if include_data_packages and self.data_packages else None,
+            'data_packages': [dp.to_json(False) for dp in self.data_packages] if include_data_packages and self.data_packages else None,
             'config_hash': config_datapackage_hash
         }

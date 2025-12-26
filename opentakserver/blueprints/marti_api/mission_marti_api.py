@@ -30,6 +30,7 @@ from opentakserver.models.EUD import EUD
 from opentakserver.models.Group import Group
 from opentakserver.models.GroupMission import GroupMission
 from opentakserver.models.GroupUser import GroupUser
+from opentakserver.models.DataPackage import DataPackage
 from opentakserver.models.Mission import Mission
 from opentakserver.models.MissionChange import MissionChange, generate_mission_change_cot
 from opentakserver.models.MissionContent import MissionContent
@@ -1142,6 +1143,9 @@ def upload_content():
     else:
         creator_uid = None
 
+    if "missionpackage" in [k.lower() for k in keywords] and file_name and not file_name.lower().endswith('.zip'):
+        file_name += ".zip"
+
     if not file_name:
         return jsonify({'success': False, 'error': gettext(u'File name cannot be blank')}), 400
 
@@ -1151,11 +1155,12 @@ def upload_content():
     if not extension and "iTAK" in request.user_agent.string:
         extension = "zip"
 
-    if extension.replace('.', '').lower() not in app.config.get("ALLOWED_EXTENSIONS"):
+    if extension.replace('.', '').lower() not in app.config.get("ALLOWED_EXTENSIONS") and not extension.replace('.', '').isdigit():
         logger.error(f"{extension} is not an allowed file extension")
         return jsonify({'success': False, 'error': gettext(u'%(extension)s is not an allowed file extension', extension=extension)}), 400
 
     file = request.data
+    logger.debug(f"Upload Content: MIME: {request.content_type}, Size: {len(file)}")
     sha256 = hashlib.sha256()
     sha256.update(file)
 
@@ -1192,6 +1197,55 @@ def upload_content():
     with open(os.path.join(app.config.get("OTS_DATA_FOLDER"), 'missions', file_name), 'wb') as f:
         f.write(file)
         f.flush()
+
+    if "missionpackage" in [k.lower() for k in content.keywords]:
+        # Check by hash first (idempotency)
+        data_package = db.session.execute(db.select(DataPackage).filter_by(hash=content.hash)).first()
+        if not data_package:
+            # Check by filename (collision/update)
+            data_package = db.session.execute(db.select(DataPackage).filter_by(filename=content.filename)).first()
+            if data_package:
+                data_package = data_package[0]
+            else:
+                data_package = DataPackage()
+                data_package.filename = content.filename
+            
+            data_package.hash = content.hash # Update hash if it changed
+        else:
+            data_package = data_package[0]
+
+        data_package.creator_uid = content.creator_uid
+        data_package.submission_user = current_user.id if current_user.is_authenticated else None
+
+        # Try to link to a user via EUD if anonymous
+        if not data_package.submission_user and content.creator_uid:
+            eud = db.session.execute(db.select(EUD).filter_by(uid=content.creator_uid)).scalars().first()
+            if eud and eud.user_id:
+                data_package.submission_user = eud.user_id
+
+        data_package.submission_time = content.submission_time
+        data_package.mime_type = "application/x-zip-compressed"
+        data_package.size = content.size
+        data_package.tool = request.args.get('tool', 'public')
+        data_package.keywords = ",".join(content.keywords) if content.keywords else ""
+        db.session.add(data_package)
+        db.session.commit()
+
+        # Copy the file to the UPLOAD_FOLDER so standard API can serve it
+        try:
+            import shutil
+            source_path = os.path.join(app.config.get("OTS_DATA_FOLDER"), "missions", content.filename)
+            dest_dir = app.config.get("UPLOAD_FOLDER")
+            dest_path = os.path.join(dest_dir, f"{data_package.hash}.zip")
+            
+            if os.path.exists(source_path):
+                os.makedirs(dest_dir, exist_ok=True)
+                shutil.copy2(source_path, dest_path)
+                logger.info(f"Copied mission package {content.filename} to {dest_path}")
+            else:
+                logger.warning(f"Source file {source_path} not found for copy")
+        except Exception as e:
+            logger.error(f"Failed to copy mission package to files dir: {e}")
 
     response = {
         "UID": content.uid, "SubmissionDateTime": iso8601_string_from_datetime(content.submission_time), "MIMEType": content.mime_type,
@@ -1323,6 +1377,15 @@ def mission_contents(mission_name: str):
                 if contact and 'callsign' in contact.attrs:
                     mission_uid.callsign = contact.attrs['callsign']
 
+
+            try:
+                db.session.add(mission_uid)
+                db.session.commit()
+            except sqlalchemy.exc.IntegrityError:
+                db.session.rollback()
+                db.session.execute(update(MissionUID).where(MissionUID.uid == mission_uid.uid).values(**mission_uid.serialize()))
+                db.session.commit()
+
             mission_change = MissionChange()
             mission_change.isFederatedChange = False
             mission_change.change_type = MissionChange.ADD_CONTENT
@@ -1347,14 +1410,6 @@ def mission_contents(mission_name: str):
             channel.basic_publish("missions", routing_key=f"missions.{mission_name}", body=body)
             channel.close()
             rabbit_connection.close()
-
-            try:
-                db.session.add(mission_uid)
-                db.session.commit()
-            except sqlalchemy.exc.IntegrityError:
-                db.session.rollback()
-                db.session.execute(update(MissionUID).where(MissionUID.uid == mission_uid.uid).values(**mission_uid.serialize()))
-                db.session.commit()
 
     db.session.commit()
 
