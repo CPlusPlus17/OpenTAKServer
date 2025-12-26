@@ -67,15 +67,17 @@ def inject_recording_hooks(settings):
                     base_url = f"{parsed.scheme}://{parsed.netloc}"
                     
                     webhook_url = f"{base_url}/api/mediamtx/webhook"
-                    token = app.config.get("OTS_MEDIAMTX_TOKEN")
+                    token = os.environ.get("OTS_MEDIAMTX_TOKEN", app.config.get("OTS_MEDIAMTX_TOKEN"))
                     
                     # Use wget because curl is not available in bluenviron/mediamtx:latest-ffmpeg (Alpine)
                     # Redirect output to file for debugging
                     cmd_create = f"/usr/bin/wget -S -O - \"{webhook_url}?event=segment_record&path=$MTX_PATH&segment_path=$MTX_SEGMENT_PATH&token={token}\" >> /recordings/wget.log 2>&1"
                     cmd_complete = f"/usr/bin/wget -S -O - \"{webhook_url}?event=segment_record_complete&path=$MTX_PATH&segment_path=$MTX_SEGMENT_PATH&token={token}\" >> /recordings/wget.log 2>&1"
+                    cmd_ready = f"/usr/bin/wget -S -O - \"{webhook_url}?event=ready&path=$MTX_PATH&rtsp_port=$MTX_RTSP_PORT&token={token}\" >> /recordings/wget.log 2>&1"
                     
                     settings['runOnRecordSegmentCreate'] = cmd_create
                     settings['runOnRecordSegmentComplete'] = cmd_complete
+                    settings['runOnReady'] = cmd_ready
                     # Force absolute path for recordings to ensure they are written to the shared volume
                     settings['recordPath'] = "/recordings/%path/%Y-%m-%d_%H-%M-%S-%f"
                     logger.debug("Injected recording hooks for path")
@@ -85,9 +87,11 @@ def inject_recording_hooks(settings):
 
 
 @mediamtx_api_blueprint.route('/api/mediamtx/webhook')
+@mediamtx_api_blueprint.route('/api/mediamtx/webhook')
 def mediamtx_webhook():
     token = request.args.get('token')
-    if not token or bleach.clean(token) != app.config.get("OTS_MEDIAMTX_TOKEN"):
+    expected_token = os.environ.get("OTS_MEDIAMTX_TOKEN", app.config.get("OTS_MEDIAMTX_TOKEN"))
+    if not token or bleach.clean(token) != expected_token:
         logger.error('Invalid token')
         return jsonify({'success': False, 'error': gettext(u'Invalid token')}), 401
 
@@ -381,6 +385,7 @@ def delete_stream():
         if not video:
             return jsonify({'success': False, 'error': gettext(u'Path %(path)s not found', path=path)}), 400
 
+        db.session.query(VideoRecording).filter(VideoRecording.path == path).delete()
         video.delete()
         db.session.commit()
     except requests.exceptions.ConnectionError as e:
@@ -498,6 +503,20 @@ def external_auth():
                         logger.error(
                             "Failed to add path {} to mediamtx. Status code {} {}".format(v.path, r.status_code,
                                                                                           r.text))
+                    
+                    # Fallback to PATCH if ADD failed (likely because path exists)
+                    if r.status_code == 400:
+                         logger.debug("Path {} might already exist, trying PATCH".format(v.path))
+                         r = requests.patch(
+                            "{}/v3/config/paths/patch/{}".format(app.config.get("OTS_MEDIAMTX_API_ADDRESS"), v.path),
+                            json=path_config)
+                         if r.status_code == 200:
+                            logger.debug("Patched path {} to mediamtx".format(v.path))
+                         else:
+                             # Try adding again if patch failed (just in case) or log error
+                             # Wait, if patch failed, it failed.
+                             logger.error("Failed to patch path {} mediamtx. Status code {} {}".format(v.path, r.status_code, r.text))
+
                     logger.debug("Inserted video stream {}".format(v.uid))
                 except sqlalchemy.exc.IntegrityError as e:
                     try:
@@ -512,6 +531,29 @@ def external_auth():
                             logger.error(
                                 "Failed to add path {} to mediamtx. Status code {} {}".format(v.path, r.status_code,
                                                                                               r.text))
+
+                        # Fallback to PATCH if ADD failed in exception block
+                        if r.status_code == 400:
+                             logger.debug("Path {} might already exist, trying PATCH".format(v.path))
+                             
+                             # Load existing settings to preserver 'record' status
+                             existing_settings = json.loads(video.mediamtx_settings)
+                             
+                             # Re-inject hooks to ensure they have the correct token and headers
+                             inject_recording_hooks(existing_settings)
+                             
+                             r = requests.patch(
+                                "{}/v3/config/paths/patch/{}".format(app.config.get("OTS_MEDIAMTX_API_ADDRESS"), v.path),
+                                json=existing_settings)
+                             
+                             if r.status_code == 200:
+                                logger.debug("Patched path {} to mediamtx".format(v.path))
+                                # Update DB with new settings
+                                video.mediamtx_settings = json.dumps(existing_settings)
+                                db.session.commit()
+                             else:
+                                 logger.error("Failed to patch path {} mediamtx. Status code {} {}".format(v.path, r.status_code, r.text))
+
                     except:
                         logger.error(traceback.format_exc())
 
