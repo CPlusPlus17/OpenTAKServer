@@ -181,6 +181,13 @@ postgresql:
     password: ots
     database: ots
 
+recordings:
+  persistence:
+    enabled: true
+    size: 10Gi
+    accessMode: ReadWriteOnce
+    # storageClass: ""
+
 rabbitmq:
   enabled: true
   auth:

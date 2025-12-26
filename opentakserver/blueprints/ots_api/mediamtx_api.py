@@ -49,6 +49,39 @@ def get_stream_protocol(source_type):
     return protocol
 
 
+def inject_recording_hooks(settings):
+    """
+    Injects runOnRecordSegmentCreate and runOnRecordSegmentComplete hooks into the MediaMTX stream settings
+    if recording is enabled. This ensures the backend is notified when a recording segment is created.
+    """
+    if settings.get('record'):
+        try:
+            # Fetch global config to find the backend webhook URL
+            r = requests.get("{}/v3/config/global/get".format(app.config.get("OTS_MEDIAMTX_API_ADDRESS")))
+            if r.status_code == 200:
+                global_conf = r.json()
+                auth_webhook = global_conf.get('authWebhook')
+                if auth_webhook:
+                    # Extract base URL
+                    parsed = urlparse(auth_webhook)
+                    base_url = f"{parsed.scheme}://{parsed.netloc}"
+                    
+                    webhook_url = f"{base_url}/api/mediamtx/webhook"
+                    token = app.config.get("OTS_MEDIAMTX_TOKEN")
+                    
+                    cmd_create = f"curl -s \"{webhook_url}?event=segment_record&path=$MTX_PATH&segment_path=$MTX_SEGMENT_PATH&token={token}\""
+                    cmd_complete = f"curl -s \"{webhook_url}?event=segment_record_complete&path=$MTX_PATH&segment_path=$MTX_SEGMENT_PATH&token={token}\""
+                    
+                    settings['runOnRecordSegmentCreate'] = cmd_create
+                    settings['runOnRecordSegmentComplete'] = cmd_complete
+                    # Force absolute path for recordings to ensure they are written to the shared volume
+                    settings['recordPath'] = "/app/data/mediamtx/recordings/%path/%Y-%m-%d_%H-%M-%S-%f"
+                    logger.debug("Injected recording hooks for path")
+        except Exception as e:
+            logger.error(f"Failed to inject recording hooks: {e}")
+
+
+
 @mediamtx_api_blueprint.route('/api/mediamtx/webhook')
 def mediamtx_webhook():
     token = request.args.get('token')
@@ -64,10 +97,12 @@ def mediamtx_webhook():
         if path == 'startup':
             paths = VideoStream.query.all()
             for path in paths:
+                settings = json.loads(path.mediamtx_settings)
+                inject_recording_hooks(settings)
                 r = requests.post(
                     "{}/v3/config/paths/add/{}".format(app.config.get("OTS_MEDIAMTX_API_ADDRESS"), path.path),
-                    json=json.loads(path.mediamtx_settings))
-                logger.debug("Init added {} {}".format(path, r.status_code))
+                    json=settings)
+                logger.debug("Init added {} {}".format(path.path, r.status_code))
 
             # Get all paths from MediaMTX and make sure they're in OTS's database
             r = requests.get("{}/v3/paths/list".format(app.config.get("OTS_MEDIAMTX_API_ADDRESS")))
@@ -302,6 +337,9 @@ def add_update_stream():
             if value is not None:
                 settings[key] = value
                 logger.debug("set {} to {}".format(key, value))
+
+        # Inject recording hooks if recording is enabled
+        inject_recording_hooks(settings)
 
         if request.path.endswith('update'):
             r = requests.patch("{}/v3/config/paths/patch/{}".format(app.config.get("OTS_MEDIAMTX_API_ADDRESS"), path),

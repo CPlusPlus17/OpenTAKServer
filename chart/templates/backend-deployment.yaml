@@ -54,10 +54,15 @@ spec:
           volumeMounts:
             - name: backend-data
               mountPath: /app/data
+            - name: recordings
+              mountPath: /app/data/mediamtx/recordings
       volumes:
         - name: backend-data
           persistentVolumeClaim:
             claimName: {{ include "opentakserver.fullname" . }}-backend-data
+        - name: recordings
+          persistentVolumeClaim:
+            claimName: {{ include "opentakserver.fullname" . }}-recordings
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

@@ -76,4 +76,20 @@ spec:
           resources:
             {{- toYaml .Values.mediamtx.resources | nindent 12 }}
 
+          volumeMounts:
+            - name: recordings
+              mountPath: /app/data/mediamtx/recordings
+      volumes:
+        - name: recordings
+          persistentVolumeClaim:
+            claimName: {{ include "opentakserver.fullname" . }}-recordings
+      affinity:
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app.kubernetes.io/component: backend
+                  {{- include "opentakserver.selectorLabels" . | nindent 18 }}
+              topologyKey: "kubernetes.io/hostname"
+
 {{- end }}
