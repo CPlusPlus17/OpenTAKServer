@@ -88,9 +88,9 @@ class CoTController:
         self.rabbit_channel.start_consuming()
 
     def insert_cot(self, soup, event, uid):
-        start = datetime_from_iso8601_string(event.attrs['start'])
-        stale = datetime_from_iso8601_string(event.attrs['stale'])
-        timestamp = datetime_from_iso8601_string(event.attrs['time'])
+        start = datetime_from_iso8601_string(event.attrs.get('start'))
+        stale = datetime_from_iso8601_string(event.attrs.get('stale'))
+        timestamp = datetime_from_iso8601_string(event.attrs.get('time'))
 
         # Assign CoT to a data sync mission
         dest = event.find("dest")
@@ -100,8 +100,8 @@ class CoTController:
 
         with self.context:
             res = self.db.session.execute(insert(CoT).values(
-                how=event.attrs['how'], type=event.attrs['type'], sender_uid=uid, timestamp=timestamp, xml=str(soup),
-                start=start, stale=stale, mission_name=mission_name, uid=event.attrs['uid']
+                how=event.attrs.get('how'), type=event.attrs.get('type'), sender_uid=uid, timestamp=timestamp, xml=str(soup),
+                start=start, stale=stale, mission_name=mission_name, uid=event.attrs.get('uid')
             ))
 
             try:
@@ -119,14 +119,14 @@ class CoTController:
         point = event.find('point')
         if point and not point.attrs['lat'].startswith('999'):
             p = Point()
-            p.uid = event.attrs['uid']
+            p.uid = event.attrs.get('uid')
             p.device_uid = uid
             p.ce = point.attrs['ce']
             p.hae = point.attrs['hae']
             p.le = point.attrs['le']
             p.latitude = float(point.attrs['lat'])
             p.longitude = float(point.attrs['lon'])
-            p.timestamp = datetime_from_iso8601_string(event.attrs['time'])
+            p.timestamp = datetime_from_iso8601_string(event.attrs.get('time'))
             p.cot_id = cot_id
 
             # We only really care about the rest of the data if there's a valid lat/lon
@@ -502,8 +502,8 @@ class CoTController:
                 emergency_type = emergency.attrs['type']
                 alert = Alert()
                 alert.sender_uid = uid
-                alert.uid = event.attrs['uid']
-                alert.start_time = datetime_from_iso8601_string(event.attrs['start'])
+                alert.uid = event.attrs.get('uid')
+                alert.start_time = datetime_from_iso8601_string(event.attrs.get('start') or event.attrs.get('time'))
                 alert.point_id = point_pk
                 alert.alert_type = emergency_type
                 alert.cot_id = cot_pk
@@ -516,9 +516,21 @@ class CoTController:
                 with self.context:
                     try:
                         alert = self.db.session.execute(
-                            Alert.query.filter(Alert.cancel_time == None, Alert.sender_uid == uid).order_by(
+                            select(Alert).filter(Alert.cancel_time == None, Alert.sender_uid == uid).order_by(
                                 Alert.start_time.desc())).first()[0]
-                        alert.cancel_time = datetime_from_iso8601_string(event.attrs['start'])
+
+
+                        cot_time = datetime_from_iso8601_string(event.attrs.get('time') or event.attrs.get('start'))
+                        
+                        start_time = alert.start_time
+                        if start_time.tzinfo is None:
+                            start_time = start_time.replace(tzinfo=timezone.utc)
+                            
+                        if cot_time <= start_time:
+                             # iTAK Bug: start/time in cancel event are identical to creation event. Use server time for cancellation.
+                            alert.cancel_time = datetime.now(timezone.utc)
+                        else:
+                            alert.cancel_time = cot_time
                         self.db.session.commit()
                         self.socketio.emit('alert', alert.to_json(), namespace='/socket.io')
                     except BaseException as e:
@@ -827,13 +839,12 @@ def setup_logging(app):
         level = logging.DEBUG
     logger.setLevel(level)
 
-    if sys.stdout.isatty():
-        color_log_handler = colorlog.StreamHandler()
-        color_log_formatter = colorlog.ColoredFormatter(
-            '%(log_color)s[%(asctime)s] - cot_parser[%(process)d] - %(module)s - %(funcName)s - %(lineno)d - %(levelname)s - %(message)s', datefmt="%Y-%m-%d %H:%M:%S")
-        color_log_handler.setFormatter(color_log_formatter)
-        logger.addHandler(color_log_handler)
-        logger.info("Added color logger")
+    color_log_handler = colorlog.StreamHandler()
+    color_log_formatter = colorlog.ColoredFormatter(
+        '%(log_color)s[%(asctime)s] - cot_parser[%(process)d] - %(module)s - %(funcName)s - %(lineno)d - %(levelname)s - %(message)s', datefmt="%Y-%m-%d %H:%M:%S")
+    color_log_handler.setFormatter(color_log_formatter)
+    logger.addHandler(color_log_handler)
+    logger.info("Added color logger")
 
     os.makedirs(os.path.join(app.config.get("OTS_DATA_FOLDER"), "logs"), exist_ok=True)
     fh = TimedRotatingFileHandler(os.path.join(app.config.get("OTS_DATA_FOLDER"), 'logs', 'opentakserver.log'),

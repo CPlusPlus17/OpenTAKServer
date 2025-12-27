@@ -303,7 +303,17 @@ def query_alerts():
     query = search(query, Alert, 'sender_uid')
     query = search(query, Alert, 'alert_type')
 
-    return paginate(query)
+    query = query.order_by(Alert.id.desc())
+
+    results = paginate(query)
+    try:
+        data = results.get_json()
+        logger.info(f"API returning alerts. Count: {len(data['results']) if data and 'results' in data else 'Unknown'}")
+        if data and 'results' in data and len(data['results']) > 0:
+            logger.info(f"Top alert cancel_time: {data['results'][0].get('cancel_time')}")
+    except:
+        pass
+    return results
 
 
 @api_blueprint.route("/api/point", methods=['GET'])
