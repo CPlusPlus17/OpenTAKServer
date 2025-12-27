@@ -50,11 +50,18 @@ class MumbleAuthenticator(Murmur.ServerUpdatingAuthenticator):
 
                     save_user(auth_result.user_dn, auth_result.user_id, auth_result.user_info, auth_result.user_groups)
 
-                    return user.id, user.username, None
+                    # Return LDAP groups if available, otherwise just use the username
+                    groups = auth_result.user_groups if hasattr(auth_result, 'user_groups') else []
+                    return user.id, user.username, groups
 
             elif verify_password(password, user.password):
                 self.logger.info("Mumble auth: {} has been authenticated".format(username))
-                return user.id, user.username, None
+                
+                # Map OpenTAKServer Roles and Groups to Mumble Groups
+                mumble_groups = [role.name for role in user.roles] + [group.name for group in user.groups]
+                self.logger.debug(f"Mumble permissions for {username}: {mumble_groups}")
+                
+                return user.id, user.username, mumble_groups
 
             self.logger.warning("Mumble auth: Bad password for {}".format(username))
             return -1, None, None
