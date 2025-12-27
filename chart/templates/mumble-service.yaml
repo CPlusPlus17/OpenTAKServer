@@ -17,6 +17,10 @@ spec:
       targetPort: mumble-udp
       protocol: UDP
       name: mumble-udp
+    - port: 6502
+      targetPort: 6502
+      protocol: TCP
+      name: mumble-ice
   selector:
     {{- include "opentakserver.selectorLabels" . | nindent 4 }}
     app.kubernetes.io/component: mumble

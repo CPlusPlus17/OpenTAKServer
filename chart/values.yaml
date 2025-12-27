@@ -80,7 +80,8 @@ backend:
 
     # Plugins & Features
     # OTS_PROFILE_MAP_SOURCES: "True"
-    # OTS_ENABLE_MUMBLE_AUTHENTICATION: "False"
+    OTS_ENABLE_MUMBLE_AUTHENTICATION: "True"
+    OTS_MUMBLE_SERVER_ADDRESS: "{{ include \"opentakserver.fullname\" . }}-mumble"
     # OTS_ENABLE_PLUGINS: "True"
     # OTS_PLUGIN_REPO: "https://repo.opentakserver.io/brian/prod/"
     # OTS_ENABLE_LDAP: "False"

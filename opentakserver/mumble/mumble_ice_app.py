@@ -1,4 +1,5 @@
 import os
+import socket
 import threading
 from threading import Timer
 
@@ -31,7 +32,8 @@ class MumbleIceDaemon(threading.Thread):
 
         # Create Ice connection
         ice = Ice.initialize(idata)
-        proxy = ice.stringToProxy('Meta:tcp -h 127.0.0.1 -p 6502')
+        mumble_server = self.app.config.get("OTS_MUMBLE_SERVER_ADDRESS")
+        proxy = ice.stringToProxy(f'Meta:tcp -h {mumble_server} -p 6502')
         secret = ''
         if secret != '':
             ice.getImplicitContext().put("secret", secret)
@@ -81,11 +83,14 @@ class MumbleIceApp(Ice.Application):
         # if False and 'ice_secret':
         #     self.ice.getImplicitContext().put("secret", "some_secret")
 
-        self.logger.debug('Connecting to Ice server ({}:{})'.format('127.0.0.1', 6502))
-        base = self.ice.stringToProxy('Meta:tcp -h {} -p {}'.format('127.0.0.1', 6502))
+        mumble_server = self.app.config.get("OTS_MUMBLE_SERVER_ADDRESS")
+        self.logger.debug('Connecting to Ice server ({}:{})'.format(mumble_server, 6502))
+        base = self.ice.stringToProxy('Meta:tcp -h {} -p {}'.format(mumble_server, 6502))
         self.meta = Murmur.MetaPrx.uncheckedCast(base)
 
-        adapter = self.ice.createObjectAdapterWithEndpoints('Callback.Client', 'tcp -h 127.0.0.1')
+        host_ip = socket.gethostbyname(socket.gethostname())
+        self.logger.debug(f'Binding adapter to {host_ip}')
+        adapter = self.ice.createObjectAdapterWithEndpoints('Callback.Client', f'tcp -h {host_ip}')
         adapter.activate()
 
         metacbprx = adapter.addWithUUID(MetaCallback(self))

@@ -122,6 +122,7 @@ class DefaultConfig:
     OTS_PROFILE_MAP_SOURCES = os.getenv("OTS_PROFILE_MAP_SOURCES", "True").lower() in ["true", "1", "yes"]
 
     OTS_ENABLE_MUMBLE_AUTHENTICATION = os.getenv("OTS_ENABLE_MUMBLE_AUTHENTICATION", "False").lower() in ["true", "1", "yes"]
+    OTS_MUMBLE_SERVER_ADDRESS = os.getenv("OTS_MUMBLE_SERVER_ADDRESS", "127.0.0.1")
 
     OTS_IP_WHITELIST = os.getenv("OTS_IP_WHITELIST", "127.0.0.1").split(",")
 
